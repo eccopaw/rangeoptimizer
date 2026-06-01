@@ -379,18 +379,10 @@
       </div>
     </div>
 
-    <div class="panel sweep-panel">
-      <div class="panel-label">Overlap profile</div>
-      <p class="hint" style="margin-bottom:6px">Overlap vs position along path</p>
-      <div class="sweep-bar"><canvas id="sweep-canvas"></canvas></div>
-      <p class="hint" style="margin-top:5px">Peak = best on-path position</p>
-    </div>
-
     <div class="panel">
       <div class="panel-label">Optimize</div>
       <button class="primary" onclick="findBest()">▶ Find best position</button>
       <button onclick="resetPath()">Reset path</button>
-      <button class="danger" onclick="clearBest()">Clear best</button>
     </div>
 
     <div class="panel">
@@ -1722,7 +1714,6 @@ function loadPreset(name) {
     pushUndo();
     pts = p.pts.map(pt => Array.isArray(pt) ? {x: pt[0], y: pt[1]} : {x: pt.x, y: pt.y});
     zones = (p.zones || []).map(z => Array.isArray(z) ? {x1:z[0],y1:z[1],x2:z[2],y2:z[3]} : z);
-    if (p.radius) { radius = p.radius; document.getElementById('rad').value = radius; }
     if (p.circle) {
       circle = Array.isArray(p.circle)
         ? { x: p.circle[0], y: p.circle[1] }
