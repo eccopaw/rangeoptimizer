@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circle–Path Overlap Optimizer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0f12;
+    --surface: #141720;
+    --surface2: #1c2030;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #e8eaf0;
+    --text2: #7a8099;
+    --text3: #4a5068;
+    --accent: #4af0b0;
+    --accent2: #4ab4f0;
+    --warn: #f0b04a;
+    --danger: #f04a6a;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-weight: 300;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+  }
+
+  header {
+    padding: 18px 24px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  header h1 {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  header p {
+    font-size: 12px;
+    color: var(--text3);
+    font-family: var(--mono);
+  }
+
+  .main {
+    display: flex;
+    flex: 1;
+    gap: 0;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .canvas-wrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+  }
+
+  .sidebar {
+    width: 220px;
+    min-width: 220px;
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .panel {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .panel-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text3);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text2);
+    font-family: var(--mono);
+  }
+
+  .stat-value {
+    font-size: 13px;
+    font-family: var(--mono);
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .stat-value.accent { color: var(--accent); }
+  .stat-value.warn   { color: var(--warn); }
+  .stat-value.blue   { color: var(--accent2); }
+
+  .slider-row {
+    margin-bottom: 14px;
+  }
+
+  .slider-row label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text2);
+    font-family: var(--mono);
+    margin-bottom: 6px;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 2px;
+    background: var(--surface2);
+    border-radius: 1px;
+    outline: none;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+
+  button {
+    width: 100%;
+    padding: 9px 12px;
+    background: transparent;
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    margin-bottom: 8px;
+  }
+
+  button:hover { background: var(--surface2); border-color: var(--accent); color: var(--accent); }
+  button.primary { border-color: var(--accent); color: var(--accent); }
+  button.primary:hover { background: rgba(74,240,176,0.08); }
+  button.danger { border-color: var(--danger); color: var(--danger); }
+  button.danger:hover { background: rgba(240,74,106,0.08); }
+
+  .hint {
+    font-size: 10px;
+    color: var(--text3);
+    font-family: var(--mono);
+    line-height: 1.6;
+    margin-top: 4px;
+  }
+
+  .mode-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 10px;
+  }
+
+  .mode-btn {
+    flex: 1;
+    padding: 6px 4px;
+    font-size: 10px;
+    margin-bottom: 0;
+  }
+
+  .mode-btn.active {
+    background: var(--surface2);
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  .sweep-bar {
+    width: 100%;
+    height: 36px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 8px;
+    position: relative;
+  }
+
+  #sweep-canvas { display: block; width: 100%; height: 100%; }
+
+  footer {
+    padding: 8px 16px;
+    border-top: 1px solid var(--border);
+    font-size: 10px;
+    color: var(--text3);
+    font-family: var(--mono);
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .preset-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+  }
+  .preset-item span {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+    color: var(--text);
+  }
+  .preset-item span:hover { color: var(--accent2); }
+  .preset-item button {
+    width: auto;
+    padding: 2px 6px;
+    font-size: 10px;
+    margin-bottom: 0;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  footer span { display: flex; gap: 6px; }
+  footer b { color: var(--text2); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Range Optimization Testing</h1>
+  <p>find where a circle maximally intersects a rectilinear polyline</p>
+</header>
+
+<div class="main">
+  <div class="canvas-wrap">
+    <canvas id="main"></canvas>
+  </div>
+
+  <div class="sidebar">
+    <div class="panel">
+      <div class="panel-label">Mode</div>
+      <div class="mode-row">
+        <button class="mode-btn active" id="btn-move" onclick="setMode('move')">Move</button>
+        <button class="mode-btn" id="btn-add" onclick="setMode('add')">Add pt</button>
+        <button class="mode-btn" id="btn-del" onclick="setMode('del')">Del pt</button>
+      </div>
+      <div class="mode-row">
+        <button class="mode-btn" id="btn-zone" onclick="setMode('zone')" style="border-color:rgba(240,74,106,0.5);color:#f04a6a">⬛ Zone</button>
+        <button class="mode-btn" id="btn-zonedel" onclick="setMode('zonedel')" style="border-color:rgba(240,74,106,0.3);color:#c03050">✕ Erase</button>
+        <button class="mode-btn danger" onclick="clearZones()" style="flex:0.7;margin-bottom:0">All</button>
+      </div>
+      <p class="hint">Move: drag circle or path points.<br>Add pt: click path to insert.<br>Del pt: click node to remove.<br>Zone: drag to paint no-go areas.<br>Erase: click a zone to remove.<br><b>Right-click drag</b> to pan.</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label">Circle</div>
+      <div class="slider-row">
+        <label><span>Radius</span></label>
+        <input type="number" id="rad" min="0.1" max="9999" value="5" step="1" oninput="onRadChange(this.value)" style="width:100%;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">center</span>
+        <span class="stat-value blue" id="pos">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">overlap</span>
+        <span class="stat-value accent" id="ov">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">path length</span>
+        <span class="stat-value" id="plen">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">% covered</span>
+        <span class="stat-value warn" id="pct">—</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label">Overlap profile</div>
+      <p class="hint" style="margin-bottom:6px">Overlap vs position along path</p>
+      <div class="sweep-bar"><canvas id="sweep-canvas"></canvas></div>
+      <p class="hint" style="margin-top:5px">Peak = best on-path position</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label">Optimize</div>
+      <button class="primary" onclick="findBest()">▶ Find best position</button>
+      <button onclick="resetPath()">Reset path</button>
+      <button class="danger" onclick="clearBest()">Clear best</button>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label">Import / Export</div>
+      <button onclick="exportPath()">⎘ Copy path to clipboard</button>
+      <button onclick="importPath()">⎗ Paste path from clipboard</button>
+      <p class="hint" id="io-status" style="margin-top:6px;min-height:14px;transition:opacity 0.4s"></p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label">Presets</div>
+      <div style="display:flex;gap:4px;margin-bottom:8px">
+        <input type="text" id="preset-name" placeholder="preset name…" style="flex:1;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none;min-width:0">
+        <button onclick="savePreset()" style="width:auto;padding:5px 10px;margin-bottom:0;flex-shrink:0">Save</button>
+      </div>
+      <div id="preset-list" style="display:flex;flex-direction:column;gap:4px"></div>
+      <p class="hint" id="preset-status" style="margin-top:6px;min-height:14px;transition:opacity 0.4s"></p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span><b>drag</b> circle/nodes</span>
+  <span><b>scroll</b> to zoom</span>
+  <span><b>right-click drag</b> or <b>middle-drag</b> or <b>space+drag</b> to pan</span>
+  <span><b>zone mode</b> drag to draw exclusion zones</span>
+</footer>
+
+<script>
+const canvas = document.getElementById('main');
+const ctx = canvas.getContext('2d');
+const sweepEl = document.getElementById('sweep-canvas');
+const sweepCtx = sweepEl.getContext('2d');
+
+let W, H;
+let dpr = window.devicePixelRatio || 1;
+let GRID = 1;
+
+// Pan / zoom
+let panX = 0, panY = 0, zoom = 0.6;
+
+function toWorld(sx, sy) {
+  return { x: (sx - panX) / zoom, y: (sy - panY) / zoom };
+}
+function toScreen(wx, wy) {
+  return { x: wx * zoom + panX, y: wy * zoom + panY };
+}
+
+function snapGrid(x, y) {
+  return {
+    x: Math.round(x / GRID) * GRID,
+    y: Math.round(y / GRID) * GRID
+  };
+}
+
+function resize() {
+  const wrap = canvas.parentElement;
+  W = wrap.clientWidth;
+  H = wrap.clientHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  sweepEl.width = sweepEl.parentElement.clientWidth * dpr;
+  sweepEl.height = 36 * dpr;
+  sweepEl.style.width = '100%';
+  sweepEl.style.height = '36px';
+  sweepCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (!resizeDone) { resizeDone = true; resetPath(); } else { draw(); }
+}
+
+let resizeDone = false;
+
+window.addEventListener('resize', resize);
+
+// --- State ---
+let pts = [];
+// pts and circle stored as direct world coords (small pixel values)
+let circle = {x: 30, y: 50};
+let radius = 5;
+let bestPos = null;
+let mode = 'move';
+let dragging = null;
+let dragStartWorld = null;
+let dragDelta = null;
+let animFrame = null;
+let sweepData = [];
+
+// Exclusion zones: array of {x1,y1,x2,y2} in world coords (axis-aligned rects)
+let zones = [];
+let zoneDrag = null;
+
+function worldArr() { return pts.map(p => ({x: p.x, y: p.y})); }
+function wcx() { return circle.x; }
+function wcy() { return circle.y; }
+
+function pxArr() { return pts.map(p => toScreen(p.x, p.y)); }
+function cx() { return toScreen(circle.x, circle.y).x; }
+function cy() { return toScreen(circle.x, circle.y).y; }
+function cr() { return radius * zoom; }
+function wr() { return radius; }
+
+// --- Geometry ---
+function segOverlap(p1, p2, ox, oy, r) {
+  const dx = p2.x - p1.x, dy = p2.y - p1.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 0.5) return 0;
+  const ux = dx/len, uy = dy/len;
+  const fx = p1.x - ox, fy = p1.y - oy;
+  const b = 2*(fx*ux + fy*uy);
+  const c2 = fx*fx + fy*fy - r*r;
+  const disc = b*b - 4*c2;
+  if (disc < 0) return 0;
+  const sq = Math.sqrt(disc);
+  const t0 = Math.max(0, (-b - sq) / 2);
+  const t1 = Math.min(len, (-b + sq) / 2);
+  return Math.max(0, t1 - t0);
+}
+
+function totalOverlap(ox, oy, r) {
+  const ap = worldArr();
+  let s = 0;
+  for (let i = 0; i < ap.length - 1; i++) s += segOverlap(ap[i], ap[i+1], ox, oy, r);
+  return s;
+}
+
+function pathLength() {
+  const ap = worldArr();
+  let l = 0;
+  for (let i = 0; i < ap.length - 1; i++) l += Math.hypot(ap[i+1].x-ap[i].x, ap[i+1].y-ap[i].y);
+  return l;
+}
+
+// Intersecting chord endpoints for drawing
+function segChords(p1, p2, ox, oy, r) {
+  const dx = p2.x-p1.x, dy = p2.y-p1.y;
+  const len = Math.hypot(dx,dy);
+  if (len < 0.5) return null;
+  const ux = dx/len, uy = dy/len;
+  const fx = p1.x-ox, fy = p1.y-oy;
+  const b = 2*(fx*ux+fy*uy);
+  const c2 = fx*fx+fy*fy-r*r;
+  const disc = b*b-4*c2;
+  if (disc < 0) return null;
+  const sq = Math.sqrt(disc);
+  const t0 = Math.max(0,(-b-sq)/2), t1 = Math.min(len,(-b+sq)/2);
+  if (t1 <= t0) return null;
+  return [
+    {x: p1.x+ux*t0, y: p1.y+uy*t0},
+    {x: p1.x+ux*t1, y: p1.y+uy*t1}
+  ];
+}
+
+// --- Sweep ---
+function buildSweep() {
+  const ap = worldArr();
+  const STEPS = 200;
+  sweepData = [];
+  let cumLen = 0;
+  const segs = [];
+  for (let i = 0; i < ap.length-1; i++) {
+    const l = Math.hypot(ap[i+1].x-ap[i].x, ap[i+1].y-ap[i].y);
+    segs.push({p1:ap[i], p2:ap[i+1], len:l, start:cumLen});
+    cumLen += l;
+  }
+  for (let s = 0; s <= STEPS; s++) {
+    const t = s/STEPS * cumLen;
+    // find point on path at arc-len t
+    let rem = t, px2 = ap[0].x, py2 = ap[0].y;
+    for (const seg of segs) {
+      if (rem <= seg.len || seg === segs[segs.length-1]) {
+        const frac = Math.min(rem / Math.max(seg.len, 0.001), 1);
+        px2 = seg.p1.x + (seg.p2.x-seg.p1.x)*frac;
+        py2 = seg.p1.y + (seg.p2.y-seg.p1.y)*frac;
+        break;
+      }
+      rem -= seg.len;
+    }
+    sweepData.push({t, px: px2, py: py2, ov: totalOverlap(px2, py2, wr())});
+  }
+}
+
+function drawSweep() {
+  const sw = sweepEl.parentElement.clientWidth;
+  const sh = 36;
+  sweepCtx.clearRect(0, 0, sw, sh);
+  if (sweepData.length < 2) return;
+  const maxOv = Math.max(...sweepData.map(d=>d.ov), 0.001);
+  const totalL = sweepData[sweepData.length-1].t;
+
+  // fill
+  sweepCtx.beginPath();
+  sweepCtx.moveTo(0, sh);
+  sweepData.forEach(d => {
+    const x = (d.t / totalL) * sw;
+    const y = sh - (d.ov / maxOv) * (sh - 4);
+    sweepCtx.lineTo(x, y);
+  });
+  sweepCtx.lineTo(sw, sh);
+  sweepCtx.closePath();
+  sweepCtx.fillStyle = 'rgba(74,240,176,0.08)';
+  sweepCtx.fill();
+
+  // line
+  sweepCtx.beginPath();
+  sweepData.forEach((d, i) => {
+    const x = (d.t / totalL) * sw;
+    const y = sh - (d.ov / maxOv) * (sh - 4);
+    i === 0 ? sweepCtx.moveTo(x,y) : sweepCtx.lineTo(x,y);
+  });
+  sweepCtx.strokeStyle = '#4af0b0';
+  sweepCtx.lineWidth = 1.5;
+  sweepCtx.stroke();
+
+  // best tick
+  const bestD = sweepData.reduce((a,b) => b.ov > a.ov ? b : a);
+  const bx = (bestD.t / totalL) * sw;
+  sweepCtx.strokeStyle = '#f0b04a';
+  sweepCtx.lineWidth = 1;
+  sweepCtx.beginPath();
+  sweepCtx.moveTo(bx, 0);
+  sweepCtx.lineTo(bx, sh);
+  sweepCtx.stroke();
+}
+
+// --- Optimize ---
+function findBest() {
+  const r = wr();
+  let best = -1, bx = wcx(), by = wcy();
+
+  const ap = worldArr();
+
+  // Build segment list
+  let cumLen = 0;
+  const segs = [];
+  for (let i = 0; i < ap.length - 1; i++) {
+    const l = Math.hypot(ap[i+1].x - ap[i].x, ap[i+1].y - ap[i].y);
+    segs.push({ p1: ap[i], p2: ap[i+1], len: l });
+    cumLen += l;
+  }
+
+  function tryPt(ox, oy) {
+    if (circleInAnyZone(ox, oy)) return; // skip excluded positions
+    const ov = totalOverlap(ox, oy, r);
+    if (ov > best) { best = ov; bx = ox; by = oy; }
+  }
+
+  // Walk arc-length t along path, returning {x,y}
+  function pathPt(t) {
+    let rem = t;
+    for (const seg of segs) {
+      if (rem <= seg.len + 0.001) {
+        const frac = Math.min(rem / Math.max(seg.len, 0.001), 1);
+        return { x: seg.p1.x + (seg.p2.x - seg.p1.x) * frac,
+                 y: seg.p1.y + (seg.p2.y - seg.p1.y) * frac,
+                 seg };
+      }
+      rem -= seg.len;
+    }
+    return { x: ap[ap.length-1].x, y: ap[ap.length-1].y, seg: segs[segs.length-1] };
+  }
+
+  // 1. Dense on-path samples (~every 2px)
+  const PATH_STEPS = Math.max(300, Math.ceil(cumLen / 2));
+  for (let s = 0; s <= PATH_STEPS; s++) {
+    const { x, y } = pathPt((s / PATH_STEPS) * cumLen);
+    tryPt(x, y);
+  }
+
+  // 2. Perpendicular sweeps from every point along path (both sides, fine increments)
+  const PERP_STEPS = Math.max(400, Math.ceil(cumLen / 1.5));
+  for (let s = 0; s <= PERP_STEPS; s++) {
+    const { x, y, seg } = pathPt((s / PERP_STEPS) * cumLen);
+    const dx = seg.p2.x - seg.p1.x, dy = seg.p2.y - seg.p1.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len, ny = dx / len;
+    for (let d = r * 0.04; d <= r * 1.02; d += r * 0.04) {
+      tryPt(x + nx * d, y + ny * d);
+      tryPt(x - nx * d, y - ny * d);
+    }
+  }
+
+  // 3. All-angle radial fan from every path node (corner sweet-spots)
+  for (const pt of ap) {
+    for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 32) {
+      for (let dist = r * 0.05; dist <= r * 1.05; dist += r * 0.05) {
+        tryPt(pt.x + Math.cos(angle) * dist, pt.y + Math.sin(angle) * dist);
+      }
+    }
+  }
+
+  // 4. Gradient-ascent refinement from best candidate
+  let stepSize = r * 0.5;
+  while (stepSize > 0.25) {
+    let moved = false;
+    for (const [ddx, ddy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]]) {
+      const nx = bx + ddx * stepSize, ny = by + ddy * stepSize;
+      if (circleInAnyZone(nx, ny)) continue;
+      const ov = totalOverlap(nx, ny, r);
+      if (ov > best) { best = ov; bx = nx; by = ny; moved = true; break; }
+    }
+    if (!moved) stepSize *= 0.5;
+  }
+
+  bestPos = {x: bx, y: by, ov: best};
+
+  // Animate to best (world coords)
+  const startX = wcx(), startY = wcy();
+  let start = null;
+  if (animFrame) cancelAnimationFrame(animFrame);
+  function step(ts) {
+    if (!start) start = ts;
+    const f = Math.min((ts-start)/600, 1);
+    const ease = f < 0.5 ? 2*f*f : 1-Math.pow(-2*f+2,2)/2;
+    circle.x = startX + (bx-startX)*ease;
+    circle.y = startY + (by-startY)*ease;
+    draw();
+    if (f < 1) animFrame = requestAnimationFrame(step);
+  }
+  animFrame = requestAnimationFrame(step);
+}
+
+function clearBest() { bestPos = null; draw(); }
+
+function fitView() {
+  if (!pts.length) return;
+  const wa = worldArr();
+  const xs = wa.map(p => p.x), ys = wa.map(p => p.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const pad = 40;
+  const pathW = maxX - minX || 1, pathH = maxY - minY || 1;
+  zoom = Math.min((W - pad*2) / pathW, (H - pad*2) / pathH);
+  panX = (W - pathW * zoom) / 2 - minX * zoom;
+  panY = (H - pathH * zoom) / 2 - minY * zoom;
+}
+
+function resetPath() {
+  pts = [
+    {x: 10,  y: 50},
+    {x: 30,  y: 50},
+    {x: 30,  y: 30},
+    {x: 58,  y: 30},
+    {x: 58,  y: 70},
+    {x: 82,  y: 70},
+    {x: 82,  y: 40},
+    {x: 92,  y: 40},
+  ];
+  circle = { x: pts[1].x, y: pts[1].y };
+  radius = 5;
+  document.getElementById('rad').value = 5;
+  bestPos = null;
+  fitView();
+  draw();
+}
+
+// --- Drawing ---
+function draw() {
+  ctx.clearRect(0,0,W,H);
+
+  const ap = pxArr();       // screen positions
+  const wa = worldArr();    // world positions
+  const ocx = cx(), ocy = cy(), r = cr(); // screen circle
+  const wox = wcx(), woy = wcy();         // world circle center
+
+  // Background grid (account for pan/zoom)
+  const gridScreen = GRID * zoom;
+  const offsetX = ((panX % gridScreen) + gridScreen) % gridScreen;
+  const offsetY = ((panY % gridScreen) + gridScreen) % gridScreen;
+  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.lineWidth = 1;
+  for (let x = offsetX; x < W; x += gridScreen) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y = offsetY; y < H; y += gridScreen) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  const ov = totalOverlap(wox, woy, wr());
+  const inZone = circleInAnyZone(wox, woy);
+
+  // Draw exclusion zones
+  for (const z of zones) {
+    const s1 = toScreen(Math.min(z.x1,z.x2), Math.min(z.y1,z.y2));
+    const s2 = toScreen(Math.max(z.x1,z.x2), Math.max(z.y1,z.y2));
+    const sw2 = s2.x - s1.x, sh2 = s2.y - s1.y;
+    ctx.fillStyle = 'rgba(240,74,106,0.13)';
+    ctx.fillRect(s1.x, s1.y, sw2, sh2);
+    ctx.strokeStyle = 'rgba(240,74,106,0.55)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4,3]);
+    ctx.strokeRect(s1.x, s1.y, sw2, sh2);
+    ctx.setLineDash([]);
+  }
+
+  // Draw zone being dragged
+  if (zoneDrag) {
+    const s1 = toScreen(Math.min(zoneDrag.wx, zoneDrag.cx), Math.min(zoneDrag.wy, zoneDrag.cy));
+    const s2 = toScreen(Math.max(zoneDrag.wx, zoneDrag.cx), Math.max(zoneDrag.wy, zoneDrag.cy));
+    ctx.fillStyle = 'rgba(240,74,106,0.18)';
+    ctx.fillRect(s1.x, s1.y, s2.x-s1.x, s2.y-s1.y);
+    ctx.strokeStyle = 'rgba(240,74,106,0.8)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4,3]);
+    ctx.strokeRect(s1.x, s1.y, s2.x-s1.x, s2.y-s1.y);
+    ctx.setLineDash([]);
+  }
+
+  // Draw highlighted overlap segments (world space geometry → screen coords)
+  ctx.lineCap = 'round';
+  for (let i = 0; i < wa.length-1; i++) {
+    const chord = segChords(wa[i], wa[i+1], wox, woy, wr());
+    if (!chord) continue;
+    const s0 = toScreen(chord[0].x, chord[0].y);
+    const s1 = toScreen(chord[1].x, chord[1].y);
+    ctx.strokeStyle = '#4af0b0';
+    ctx.lineWidth = 5;
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(s0.x, s0.y);
+    ctx.lineTo(s1.x, s1.y);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  // Draw polyline
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(ap[0].x, ap[0].y);
+  for (let i = 1; i < ap.length; i++) ctx.lineTo(ap[i].x, ap[i].y);
+  ctx.stroke();
+
+  // Path endpoints
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.beginPath(); ctx.arc(ap[0].x, ap[0].y, 4, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ap[ap.length-1].x, ap[ap.length-1].y, 4, 0, Math.PI*2); ctx.fill();
+
+  // Corner nodes
+  for (let i = 1; i < ap.length-1; i++) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillStyle = '#0d0f12';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(ap[i].x, ap[i].y, 5, 0, Math.PI*2);
+    ctx.fill(); ctx.stroke();
+  }
+
+  // Best position ring (bestPos stored in world coords)
+  if (bestPos) {
+    const bs = toScreen(bestPos.x, bestPos.y);
+    ctx.strokeStyle = '#f0b04a';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5,4]);
+    ctx.beginPath();
+    ctx.arc(bs.x, bs.y, r, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#f0b04a';
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath(); ctx.arc(bs.x, bs.y, 3, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.font = '500 10px "IBM Plex Mono", monospace';
+    ctx.fillStyle = '#f0b04a';
+    ctx.fillText('best', bs.x + r + 8, bs.y + 4);
+  }
+
+  // Circle fill — red tint if in exclusion zone
+  ctx.beginPath();
+  ctx.arc(ocx, ocy, r, 0, Math.PI*2);
+  const grad = ctx.createRadialGradient(ocx, ocy, 0, ocx, ocy, r);
+  if (inZone) {
+    grad.addColorStop(0, 'rgba(240,74,106,0.18)');
+    grad.addColorStop(1, 'rgba(240,74,106,0.07)');
+  } else {
+    grad.addColorStop(0, 'rgba(74,180,240,0.10)');
+    grad.addColorStop(1, 'rgba(74,180,240,0.04)');
+  }
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Circle stroke
+  ctx.strokeStyle = inZone ? '#f04a6a' : '#4ab4f0';
+  ctx.lineWidth = inZone ? 2 : 1.5;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.arc(ocx, ocy, r, 0, Math.PI*2);
+  ctx.stroke();
+
+  // Circle center dot
+  ctx.fillStyle = inZone ? '#f04a6a' : '#4ab4f0';
+  ctx.beginPath(); ctx.arc(ocx, ocy, 3, 0, Math.PI*2); ctx.fill();
+
+  // Radius drag handle (east edge)
+  const rhx = ocx + r, rhy = ocy;
+  const isHoveringHandle = dragging && dragging.type === 'radius';
+  ctx.fillStyle = isHoveringHandle ? '#f0b04a' : '#4ab4f0';
+  ctx.strokeStyle = '#0d0f12';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  const hs = isHoveringHandle ? 6 : 5;
+  ctx.rect(rhx - hs/2, rhy - hs/2, hs, hs);
+  ctx.fill();
+  ctx.stroke();
+  // Dashed radius line when dragging handle
+  if (isHoveringHandle) {
+    ctx.strokeStyle = 'rgba(240,176,74,0.5)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.moveTo(ocx, ocy); ctx.lineTo(rhx, rhy); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Overlap label near circle
+  const labelX = ocx + r + 12, labelY = ocy - 6;
+  const pl2 = pathLength();
+  const pct2 = pl2 > 0 ? (ov / pl2 * 100) : 0;
+  ctx.font = '400 11px "IBM Plex Mono", monospace';
+  ctx.fillStyle = '#4ab4f0';
+  ctx.fillText(`r=${radius.toFixed(1)}`, labelX, labelY);
+  ctx.fillStyle = '#4af0b0';
+  ctx.fillText(`∩=${ov.toFixed(1)}px`, labelX, labelY + 14);
+  ctx.fillStyle = '#f0b04a';
+  ctx.fillText(`${pct2.toFixed(1)}% covered`, labelX, labelY + 28);
+
+  // Snap crosshair while dragging node
+  if (dragging && dragging.type === 'node') {
+    const dp = pxArr()[dragging.idx];
+    const R = 7;
+    ctx.strokeStyle = 'rgba(74,240,176,0.7)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(dp.x - R, dp.y); ctx.lineTo(dp.x + R, dp.y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(dp.x, dp.y - R); ctx.lineTo(dp.x, dp.y + R); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(74,240,176,0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(dp.x, dp.y, R + 3, 0, Math.PI*2); ctx.stroke();
+  }
+
+  // Delta label while dragging
+  if (dragging && dragDelta && (Math.abs(dragDelta.dx) > 0.5 || Math.abs(dragDelta.dy) > 0.5)) {
+    let labelAnchor;
+    if (dragging === 'circle') {
+      labelAnchor = { x: ocx, y: ocy };
+    } else {
+      const dp = pxArr()[dragging.idx];
+      labelAnchor = { x: dp.x, y: dp.y };
+    }
+    const dx = Math.round(dragDelta.dx), dy = Math.round(dragDelta.dy);
+    const sign = n => n >= 0 ? '+' + n : '' + n;
+    const label = `Δ${sign(dx)}, ${sign(dy)} px`;
+    ctx.font = '500 11px "IBM Plex Mono", monospace';
+    const metrics = ctx.measureText(label);
+    const pad = 6, lh = 16;
+    const lx = labelAnchor.x + 14;
+    const ly = labelAnchor.y - 22;
+    ctx.fillStyle = 'rgba(13,15,18,0.85)';
+    ctx.beginPath();
+    ctx.roundRect(lx - pad, ly - lh + 3, metrics.width + pad * 2, lh + 4, 3);
+    ctx.fill();
+    ctx.fillStyle = '#f0b04a';
+    ctx.fillText(label, lx, ly);
+  }
+
+  // Update stats (world coords)
+  document.getElementById('pos').textContent = `${Math.round(wox)}, ${Math.round(woy)}`;
+  document.getElementById('ov').textContent = ov.toFixed(1) + ' px';
+  const pl = pathLength();
+  document.getElementById('plen').textContent = Math.round(pl) + ' px';
+  document.getElementById('pct').textContent = pl > 0 ? (ov/pl*100).toFixed(1) + '%' : '—';
+
+  buildSweep();
+  drawSweep();
+}
+
+// --- Interaction ---
+function setMode(m) {
+  mode = m;
+  ['move','add','del','zone','zonedel'].forEach(n => {
+    const b = document.getElementById('btn-'+n);
+    if (b) b.classList.toggle('active', n===m);
+  });
+  const cursors = { move:'crosshair', add:'cell', del:'not-allowed', zone:'crosshair', zonedel:'pointer' };
+  canvas.style.cursor = cursors[m] || 'crosshair';
+}
+
+function clearZones() { zones = []; bestPos = null; draw(); }
+
+// Hover cursor update for radius handle
+canvas.addEventListener('mousemove', e => {
+  if (dragging || zoneDrag || panning || spaceDown || mode !== 'move') return;
+  const {x, y} = getLogical(e);
+  canvas.style.cursor = hitRadiusHandle(x, y) ? 'ew-resize' : 'crosshair';
+});
+
+function getLogical(e) {
+  const r = canvas.getBoundingClientRect();
+  const scaleX = W / r.width, scaleY = H / r.height;
+  const src = e.touches ? e.touches[0] : e;
+  const sx = (src.clientX - r.left) * scaleX;
+  const sy = (src.clientY - r.top) * scaleY;
+  return toWorld(sx, sy);
+}
+
+function getScreen(e) {
+  const r = canvas.getBoundingClientRect();
+  const scaleX = W / r.width, scaleY = H / r.height;
+  const src = e.touches ? e.touches[0] : e;
+  return { x: (src.clientX - r.left) * scaleX, y: (src.clientY - r.top) * scaleY };
+}
+
+function hitCircle(lx, ly) {
+  return Math.hypot(lx - wcx(), ly - wcy()) < Math.max(radius, 16 / zoom);
+}
+
+// Returns true when cursor is near the radius drag handle (east edge of circle)
+function hitRadiusHandle(lx, ly) {
+  const hx = wcx() + wr(); // handle world x
+  const hy = wcy();         // handle world y
+  return Math.hypot(lx - hx, ly - hy) < 10 / zoom;
+}
+
+function hitNode(lx, ly) {
+  const ap = worldArr();
+  for (let i = 0; i < ap.length; i++) {
+    if (Math.hypot(lx-ap[i].x, ly-ap[i].y) < 10 / zoom) return i;
+  }
+  return -1;
+}
+
+// Check if circle center (world) is inside any zone
+function circleInAnyZone(wx, wy) {
+  for (const z of zones) {
+    const x1 = Math.min(z.x1,z.x2), x2 = Math.max(z.x1,z.x2);
+    const y1 = Math.min(z.y1,z.y2), y2 = Math.max(z.y1,z.y2);
+    if (wx >= x1 && wx <= x2 && wy >= y1 && wy <= y2) return true;
+  }
+  return false;
+}
+
+// Return index of zone containing world point, or -1
+function hitZone(wx, wy) {
+  for (let i = zones.length-1; i >= 0; i--) {
+    const z = zones[i];
+    const x1 = Math.min(z.x1,z.x2), x2 = Math.max(z.x1,z.x2);
+    const y1 = Math.min(z.y1,z.y2), y2 = Math.max(z.y1,z.y2);
+    if (wx >= x1 && wx <= x2 && wy >= y1 && wy <= y2) return i;
+  }
+  return -1;
+}
+
+function nearestSegPoint(lx, ly) {
+  const ap = worldArr();
+  let best = {segIdx:0, t:0, dist:Infinity, px:0, py:0};
+  for (let i = 0; i < ap.length-1; i++) {
+    const dx = ap[i+1].x-ap[i].x, dy = ap[i+1].y-ap[i].y;
+    const len2 = dx*dx+dy*dy;
+    if (len2 < 0.001) continue;
+    const t = Math.max(0, Math.min(1, ((lx-ap[i].x)*dx+(ly-ap[i].y)*dy)/len2));
+    const px2 = ap[i].x+dx*t, py2 = ap[i].y+dy*t;
+    const d = Math.hypot(lx-px2, ly-py2);
+    if (d < best.dist) best = {segIdx:i, t, dist:d, px:px2, py:py2};
+  }
+  return best;
+}
+
+canvas.addEventListener('mousedown', onDown);
+canvas.addEventListener('mousemove', onMove);
+canvas.addEventListener('mouseup', onUp);
+canvas.addEventListener('touchstart', e => { e.preventDefault(); onDown(e); }, {passive:false});
+canvas.addEventListener('touchmove', e => { e.preventDefault(); onMove(e); }, {passive:false});
+canvas.addEventListener('touchend', e => { e.preventDefault(); onUp(e); }, {passive:false});
+
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const { x: sx, y: sy } = getScreen(e);
+  // Normalize delta — trackpads send large deltaY values, clamp the zoom step
+  const delta = Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 50);
+  const factor = Math.pow(0.999, delta); // smooth exponential zoom
+  const newZoom = Math.max(0.05, Math.min(50, zoom * factor));
+  const scale = newZoom / zoom;
+  panX = sx - (sx - panX) * scale;
+  panY = sy - (sy - panY) * scale;
+  zoom = newZoom;
+  bestPos = null;
+  draw();
+}, {passive: false});
+
+// Middle-mouse / space pan
+let panning = false, panStart = null;
+let spaceDown = false;
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') { spaceDown = true; canvas.style.cursor = 'grab'; e.preventDefault(); }
+});
+document.addEventListener('keyup', e => {
+  if (e.code === 'Space') {
+    spaceDown = false;
+    const cursors = { move:'crosshair', add:'cell', del:'not-allowed', zone:'crosshair', zonedel:'pointer' };
+    if (!panning) canvas.style.cursor = cursors[mode] || 'crosshair';
+  }
+});
+
+canvas.addEventListener('mousedown', e => {
+  if (e.button === 2 || e.button === 1 || (e.button === 0 && spaceDown)) {
+    e.preventDefault();
+    panning = true;
+    panStart = { x: e.clientX - panX, y: e.clientY - panY };
+    canvas.style.cursor = 'grabbing';
+  }
+});
+window.addEventListener('mousemove', e => {
+  if (panning) {
+    panX = e.clientX - panStart.x;
+    panY = e.clientY - panStart.y;
+    draw();
+  }
+});
+window.addEventListener('mouseup', e => {
+  if (panning && (e.button === 2 || e.button === 1 || e.button === 0)) {
+    panning = false;
+    const cursors = { move:'crosshair', add:'cell', del:'not-allowed', zone:'crosshair', zonedel:'pointer' };
+    canvas.style.cursor = spaceDown ? 'grab' : (cursors[mode] || 'crosshair');
+  }
+});
+
+function onDown(e) {
+  if (e.button === 2 || e.button === 1 || (e.button === 0 && spaceDown)) return; // handled by pan
+  const {x, y} = getLogical(e);
+
+  if (mode === 'zone') {
+    zoneDrag = { wx: x, wy: y, cx: x, cy: y };
+    return;
+  }
+  if (mode === 'zonedel') {
+    const idx = hitZone(x, y);
+    if (idx >= 0) { zones.splice(idx, 1); bestPos = null; draw(); }
+    return;
+  }
+  if (mode === 'move') {
+    const ni = hitNode(x, y);
+    if (ni >= 0) {
+      const wp = worldArr()[ni];
+      dragStartWorld = {x: wp.x, y: wp.y};
+      dragDelta = {dx: 0, dy: 0};
+      dragging = {type:'node', idx:ni};
+      return;
+    }
+    if (hitRadiusHandle(x, y)) {
+      dragStartWorld = {x: wr(), y: 0}; // store start radius in .x
+      dragging = {type:'radius'};
+      return;
+    }
+    if (hitCircle(x, y)) {
+      dragStartWorld = {x: wcx(), y: wcy()};
+      dragDelta = {dx: 0, dy: 0};
+      dragging = 'circle';
+      return;
+    }
+  }
+  if (mode === 'add') {
+    const seg = nearestSegPoint(x, y);
+    if (seg.dist < 20 / zoom) {
+      const snapped = snapGrid(seg.px, seg.py);
+      pts.splice(seg.segIdx+1, 0, {x: snapped.x, y: snapped.y});
+      dragging = {type:'node', idx:seg.segIdx+1};
+      draw();
+    }
+    return;
+  }
+  if (mode === 'del') {
+    const ni = hitNode(x, y);
+    if (ni >= 0 && pts.length > 2) {
+      pts.splice(ni, 1);
+      bestPos = null;
+      draw();
+    }
+    return;
+  }
+}
+
+function onMove(e) {
+  const {x, y} = getLogical(e);
+  if (zoneDrag) {
+    zoneDrag.cx = x; zoneDrag.cy = y;
+    draw();
+    return;
+  }
+  if (!dragging) return;
+  if (dragging === 'circle') {
+    circle.x = x;
+    circle.y = y;
+    if (dragStartWorld) dragDelta = {dx: x - dragStartWorld.x, dy: y - dragStartWorld.y};
+  } else if (dragging.type === 'radius') {
+    const dist = Math.hypot(x - wcx(), y - wcy());
+    radius = Math.max(0.1, dist);
+    bestPos = null;
+    document.getElementById('rad').value = radius.toFixed(2);
+  } else if (dragging.type === 'node') {
+    const snapped = snapGrid(x, y);
+    pts[dragging.idx] = {x: snapped.x, y: snapped.y};
+    if (dragStartWorld) dragDelta = {dx: snapped.x - dragStartWorld.x, dy: snapped.y - dragStartWorld.y};
+    bestPos = null;
+  }
+  draw();
+}
+
+function onUp() {
+  if (zoneDrag) {
+    const w = Math.abs(zoneDrag.cx - zoneDrag.wx);
+    const h = Math.abs(zoneDrag.cy - zoneDrag.wy);
+    if (w > 4 / zoom && h > 4 / zoom) {
+      zones.push({ x1: zoneDrag.wx, y1: zoneDrag.wy, x2: zoneDrag.cx, y2: zoneDrag.cy });
+      bestPos = null;
+    }
+    zoneDrag = null;
+    draw();
+    return;
+  }
+  dragging = null; dragStartWorld = null; dragDelta = null; draw();
+}
+
+function onRadChange(v) {
+  const n = parseFloat(v);
+  if (!isNaN(n) && n > 0) radius = n;
+  bestPos = null;
+  draw();
+}
+
+// --- Import / Export ---
+function ioStatus(msg, ok) {
+  const el = document.getElementById('io-status');
+  el.textContent = msg;
+  el.style.color = ok ? 'var(--accent)' : 'var(--danger)';
+  el.style.opacity = '1';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.opacity = '0'; }, 2500);
+}
+
+function exportPath() {
+  const ap = worldArr();
+  const text = JSON.stringify(ap.map(p => [Math.round(p.x), Math.round(p.y)]));
+  navigator.clipboard.writeText(text)
+    .then(() => ioStatus('Copied!', true))
+    .catch(() => {
+      // Fallback for browsers that block clipboard
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      ioStatus('Copied!', true);
+    });
+}
+
+function importPath() {
+  navigator.clipboard.readText()
+    .then(text => {
+      try {
+        const raw = JSON.parse(text);
+        if (!Array.isArray(raw) || raw.length < 2) throw new Error('Need at least 2 points');
+        const newPts = raw.map(p => {
+          if (!Array.isArray(p) || p.length < 2) throw new Error('Bad point');
+          return {x: p[0], y: p[1]};
+        });
+        pts = newPts;
+        bestPos = null;
+        draw();
+        ioStatus(`Loaded ${pts.length} points`, true);
+      } catch(err) {
+        ioStatus('Invalid format', false);
+      }
+    })
+    .catch(() => ioStatus('Clipboard access denied', false));
+}
+
+// --- Presets ---
+const COOKIE_KEY = 'cpo_presets';
+
+const BUILTIN_PRESETS = {
+  'savannah': {
+    pts: [[-50,450],[500,450],[500,-550],[1400,-550],[1400,950],[850,950],[850,1550],[650,1550],[650,2150],[1650,2150]].map(([x,y]) => [x/50, y/50]),
+    zones: [], radius: 5,
+    circle: [-50/50, 450/50]
+  },
+  'canyon': {
+    pts: [[-150,500],[600,500],[600,1000],[1500,1000],[1500,450],[1150,450],[1150,-350],[1950,-350],[1950,-650],[2950,-650],[2950,-500],[3100,-500],[3100,600],[4300,600]].map(([x,y]) => [x/50, y/50]),
+    zones: [], radius: 5,
+    circle: [-150/50, 500/50]
+  }
+};
+
+function getCookiePresets() {
+  try {
+    const match = document.cookie.split('; ').find(r => r.startsWith(COOKIE_KEY + '='));
+    if (!match) return {};
+    return JSON.parse(decodeURIComponent(match.split('=').slice(1).join('=')));
+  } catch { return {}; }
+}
+
+function setCookiePresets(obj) {
+  const val = encodeURIComponent(JSON.stringify(obj));
+  // 1 year expiry
+  const exp = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toUTCString();
+  document.cookie = `${COOKIE_KEY}=${val};expires=${exp};path=/;SameSite=Lax`;
+}
+
+function presetStatus(msg, ok) {
+  const el = document.getElementById('preset-status');
+  el.textContent = msg;
+  el.style.color = ok ? 'var(--accent)' : 'var(--danger)';
+  el.style.opacity = '1';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.opacity = '0'; }, 2500);
+}
+
+function savePreset() {
+  const nameEl = document.getElementById('preset-name');
+  const name = nameEl.value.trim();
+  if (!name) { presetStatus('Enter a name first', false); return; }
+  const presets = getCookiePresets();
+  const wa = worldArr();
+  presets[name] = {
+    pts: wa.map(p => [Math.round(p.x), Math.round(p.y)]),
+    zones: zones.map(z => [z.x1, z.y1, z.x2, z.y2]),
+    radius,
+    circle: [Math.round(wcx()), Math.round(wcy())]
+  };
+  setCookiePresets(presets);
+  nameEl.value = '';
+  renderPresets();
+  presetStatus(`Saved "${name}"`, true);
+}
+
+function loadPreset(name) {
+  const presets = { ...BUILTIN_PRESETS, ...getCookiePresets() };
+  const p = presets[name];
+  if (!p) { presetStatus('Preset not found', false); return; }
+  try {
+    pts = p.pts.map(([x, y]) => ({ x, y }));
+    zones = (p.zones || []).map(([x1,y1,x2,y2]) => ({x1,y1,x2,y2}));
+    if (p.radius) { radius = p.radius; document.getElementById('rad').value = radius; }
+    if (p.circle) { circle = { x: p.circle[0], y: p.circle[1] }; }
+    bestPos = null;
+    fitView();
+    draw();
+    presetStatus(`Loaded "${name}"`, true);
+  } catch { presetStatus('Failed to load', false); }
+}
+
+function deletePreset(name) {
+  const presets = getCookiePresets();
+  delete presets[name];
+  setCookiePresets(presets);
+  renderPresets();
+  presetStatus(`Deleted "${name}"`, true);
+}
+
+function renderPresets() {
+  const list = document.getElementById('preset-list');
+  const userPresets = getCookiePresets();
+  const userNames = Object.keys(userPresets);
+  const builtinNames = Object.keys(BUILTIN_PRESETS);
+
+  let html = '';
+  // Built-in presets (no delete button)
+  for (const name of builtinNames) {
+    html += `<div class="preset-item">
+      <span title="${name}" onclick="loadPreset('${name}')">▷ ${name}</span>
+      <span style="font-size:9px;color:var(--text3);padding:0 4px;flex-shrink:0">built-in</span>
+    </div>`;
+  }
+  // User presets
+  for (const name of userNames) {
+    html += `<div class="preset-item">
+      <span title="${name}" onclick="loadPreset('${name.replace(/'/g,"\\'")}')">▷ ${name}</span>
+      <button onclick="deletePreset('${name.replace(/'/g,"\\'")}')">✕</button>
+    </div>`;
+  }
+  if (!html) html = '<p class="hint">No presets saved yet.</p>';
+  list.innerHTML = html;
+}
+
+// Allow Enter key to save preset
+document.getElementById('preset-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') savePreset();
+});
+
+// Init
+resize();
+renderPresets();
+</script>
+</body>
+</html>
