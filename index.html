@@ -87,16 +87,34 @@
   }
 
   .sidebar {
-    width: 220px;
-    min-width: 220px;
+    width: var(--sidebar-w, 220px);
+    min-width: 140px;
+    max-width: 480px;
     border-left: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    flex-shrink: 0;
+    font-size: var(--sidebar-scale, 1) * 1em;
+  }
+
+  .sidebar-resize {
+    width: 5px;
+    cursor: ew-resize;
+    background: transparent;
+    border-left: 1px solid var(--border);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+    transition: background 0.15s;
+  }
+  .sidebar-resize:hover, .sidebar-resize.dragging {
+    background: rgba(74,180,240,0.18);
+    border-left-color: var(--accent2);
   }
 
   .panel {
-    padding: 16px;
+    padding: 10px 16px;
     border-bottom: 1px solid var(--border);
   }
 
@@ -107,14 +125,14 @@
     color: var(--text3);
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
   }
 
   .stat-row {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
 
   .stat-label {
@@ -135,7 +153,7 @@
   .stat-value.blue   { color: var(--accent2); }
 
   .slider-row {
-    margin-bottom: 14px;
+    margin-bottom: 10px;
   }
 
   .slider-row label {
@@ -144,7 +162,7 @@
     font-size: 11px;
     color: var(--text2);
     font-family: var(--mono);
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
 
   input[type=range] {
@@ -170,7 +188,7 @@
 
   button {
     width: 100%;
-    padding: 9px 12px;
+    padding: 7px 12px;
     background: transparent;
     border: 1px solid var(--border2);
     border-radius: 4px;
@@ -182,7 +200,7 @@
     cursor: pointer;
     text-transform: uppercase;
     transition: background 0.15s, border-color 0.15s, color 0.15s;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
 
   button:hover { background: var(--surface2); border-color: var(--accent); color: var(--accent); }
@@ -271,6 +289,31 @@
     flex-shrink: 0;
   }
 
+  /* Progressive disclosure based on sidebar width */
+
+  /* Things hidden at small width */
+  .sb-sm .hint { display: none; }
+  .sb-sm .sweep-panel { display: none; }
+  .sb-sm .stat-extra { display: none; }
+  .sb-sm .panel-label { display: none; }
+
+  /* Things only visible at large width */
+  .stat-extra { display: none; }
+  .sb-lg .stat-extra { display: flex; }
+  .sb-xl .stat-extra { display: flex; }
+
+  /* Hints collapse to 2 lines at md, expand fully at lg+ */
+  .hint { overflow: hidden; max-height: 2.4em; }
+  .sb-lg .hint { max-height: none; }
+  .sb-xl .hint { max-height: none; }
+
+  /* Sweep bar taller at xl */
+  .sb-xl .sweep-bar { height: 60px; }
+
+  /* Extra detail panel only at xl */
+  .detail-panel { display: none; }
+  .sb-xl .detail-panel { display: block; }
+
   footer span { display: flex; gap: 6px; }
   footer b { color: var(--text2); font-weight: 500; }
 </style>
@@ -287,7 +330,8 @@
     <canvas id="main"></canvas>
   </div>
 
-  <div class="sidebar">
+  <div class="sidebar-resize" id="sb-resize"></div>
+  <div class="sidebar" id="sidebar">
     <div class="panel">
       <div class="panel-label">Mode</div>
       <div class="mode-row">
@@ -325,9 +369,17 @@
         <span class="stat-label">% covered</span>
         <span class="stat-value warn" id="pct">—</span>
       </div>
+      <div class="stat-row stat-extra">
+        <span class="stat-label">zones</span>
+        <span class="stat-value" id="zone-count">0</span>
+      </div>
+      <div class="stat-row stat-extra">
+        <span class="stat-label">best overlap</span>
+        <span class="stat-value warn" id="best-ov">—</span>
+      </div>
     </div>
 
-    <div class="panel">
+    <div class="panel sweep-panel">
       <div class="panel-label">Overlap profile</div>
       <p class="hint" style="margin-bottom:6px">Overlap vs position along path</p>
       <div class="sweep-bar"><canvas id="sweep-canvas"></canvas></div>
@@ -356,6 +408,11 @@
       </div>
       <div id="preset-list" style="display:flex;flex-direction:column;gap:4px"></div>
       <p class="hint" id="preset-status" style="margin-top:6px;min-height:14px;transition:opacity 0.4s"></p>
+    </div>
+
+    <div class="panel detail-panel">
+      <div class="panel-label">Path nodes</div>
+      <div id="node-list" style="font-family:var(--mono);font-size:10px;color:var(--text2);line-height:1.8;max-height:160px;overflow-y:auto"></div>
     </div>
   </div>
 </div>
@@ -1330,6 +1387,53 @@ function renderPresets() {
 document.getElementById('preset-name').addEventListener('keydown', e => {
   if (e.key === 'Enter') savePreset();
 });
+
+// --- Sidebar resize ---
+(function() {
+  const handle = document.getElementById('sb-resize');
+  const sidebar = document.getElementById('sidebar');
+  const BASE_WIDTH = 220;
+  let resizing = false, startX = 0, startW = 0;
+
+  function setSidebarWidth(w) {
+    w = Math.max(140, Math.min(600, w));
+    sidebar.style.width = w + 'px';
+    // Remove old threshold classes
+    sidebar.classList.remove('sb-sm', 'sb-md', 'sb-lg', 'sb-xl');
+    if (w < 180)      sidebar.classList.add('sb-sm');
+    else if (w < 280) sidebar.classList.add('sb-md');
+    else if (w < 380) sidebar.classList.add('sb-lg');
+    else              sidebar.classList.add('sb-xl');
+  }
+
+  handle.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    resizing = true;
+    startX = e.clientX;
+    startW = sidebar.offsetWidth;
+    handle.classList.add('dragging');
+    document.body.style.cursor = 'ew-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (!resizing) return;
+    // Sidebar is on the right, dragging left = wider
+    const delta = startX - e.clientX;
+    setSidebarWidth(startW + delta);
+    // Trigger canvas resize to fill remaining space
+    resize();
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (!resizing) return;
+    resizing = false;
+    handle.classList.remove('dragging');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  });
+})();
 
 // Init
 resize();
