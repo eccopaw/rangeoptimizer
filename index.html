@@ -344,7 +344,7 @@
         <button class="mode-btn" id="btn-zonedel" onclick="setMode('zonedel')" style="border-color:rgba(240,74,106,0.3);color:#c03050">✕ Erase</button>
         <button class="mode-btn danger" onclick="clearZones()" style="flex:0.7;margin-bottom:0">All</button>
       </div>
-      <p class="hint">Move: drag circle or path points.<br>Add pt: click path to insert.<br>Del pt: click node to remove.<br>Zone: drag to paint no-go areas.<br>Erase: click a zone to remove.<br><b>Right-click drag</b> to pan.</p>
+      <p class="hint">Move: drag circle or path points.<br>Add pt: click path/endpoints to extend or insert.<br>Del pt: click node to remove.<br>Zone: drag to paint no-go areas.<br>Erase: click a zone to remove.<br><b>Right-click drag</b> to pan.<br><b>Ctrl+Z</b> to undo <span id="undo-count" style="color:var(--text3)"></span></p>
     </div>
 
     <div class="panel">
@@ -911,7 +911,7 @@ function findBest() {
   animFrame = requestAnimationFrame(step);
 }
 
-function clearBest() { bestPos = null; draw(); }
+function clearBest() { pushUndo(); bestPos = null; draw(); }
 
 function fitView() {
   if (!pts.length) return;
@@ -927,6 +927,7 @@ function fitView() {
 }
 
 function resetPath() {
+  pushUndo();
   pts = [
     {x: 10,  y: 50},
     {x: 30,  y: 50},
@@ -1207,9 +1208,50 @@ function draw() {
   const pl = pathLength();
   document.getElementById('plen').textContent = Math.round(pl) + ' px';
   document.getElementById('pct').textContent = pl > 0 ? (ov/pl*100).toFixed(1) + '%' : '—';
+  const undoEl = document.getElementById('undo-count');
+  if (undoEl) undoEl.textContent = undoStack.length ? `(${undoStack.length})` : '';
+
+  // Highlight endpoints in add mode
+  if (mode === 'add' && ap.length >= 2) {
+    for (const ep of [ap[0], ap[ap.length-1]]) {
+      ctx.strokeStyle = '#4af0b0';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3,2]);
+      ctx.beginPath(); ctx.arc(ep.x, ep.y, 8 / zoom * zoom, 0, Math.PI*2); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
 
   buildSweep();
   drawSweep();
+}
+
+// --- Undo ---
+const undoStack = [];
+const MAX_UNDO = 50;
+
+function pushUndo() {
+  undoStack.push({
+    pts: pts.map(p => ({...p})),
+    circle: {...circle},
+    radius,
+    zones: zones.map(z => ({...z})),
+    bestPos: bestPos ? {...bestPos} : null,
+  });
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+}
+
+function undo() {
+  if (!undoStack.length) return;
+  const state = undoStack.pop();
+  pts = state.pts;
+  circle = state.circle;
+  radius = state.radius;
+  zones = state.zones;
+  bestPos = state.bestPos;
+  document.getElementById('rad').value = radius;
+  invalidateHeatmap();
+  draw();
 }
 
 // --- Interaction ---
@@ -1223,7 +1265,7 @@ function setMode(m) {
   canvas.style.cursor = cursors[m] || 'crosshair';
 }
 
-function clearZones() { zones = []; bestPos = null; draw(); }
+function clearZones() { pushUndo(); zones = []; bestPos = null; draw(); }
 
 // Hover cursor update for radius handle
 canvas.addEventListener('mousemove', e => {
@@ -1334,6 +1376,7 @@ let spaceDown = false;
 
 document.addEventListener('keydown', e => {
   if (e.code === 'Space') { spaceDown = true; canvas.style.cursor = 'grab'; e.preventDefault(); }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
 });
 document.addEventListener('keyup', e => {
   if (e.code === 'Space') {
@@ -1377,12 +1420,13 @@ function onDown(e) {
   }
   if (mode === 'zonedel') {
     const idx = hitZone(x, y);
-    if (idx >= 0) { zones.splice(idx, 1); bestPos = null; draw(); }
+    if (idx >= 0) { pushUndo(); zones.splice(idx, 1); bestPos = null; draw(); }
     return;
   }
   if (mode === 'move') {
     const ni = hitNode(x, y);
     if (ni >= 0) {
+      pushUndo();
       const wp = worldArr()[ni];
       dragStartWorld = {x: wp.x, y: wp.y};
       dragDelta = {dx: 0, dy: 0};
@@ -1390,11 +1434,13 @@ function onDown(e) {
       return;
     }
     if (hitRadiusHandle(x, y)) {
-      dragStartWorld = {x: wr(), y: 0}; // store start radius in .x
+      pushUndo();
+      dragStartWorld = {x: wr(), y: 0};
       dragging = {type:'radius'};
       return;
     }
     if (hitCircle(x, y)) {
+      pushUndo();
       dragStartWorld = {x: wcx(), y: wcy()};
       dragDelta = {dx: 0, dy: 0};
       dragging = 'circle';
@@ -1402,10 +1448,42 @@ function onDown(e) {
     }
   }
   if (mode === 'add') {
+    const wa = worldArr();
+    const THRESH = 10 / zoom;
+
+    // Check if clicking near first endpoint → prepend new point and drag it
+    if (Math.hypot(x - wa[0].x, y - wa[0].y) < THRESH) {
+      pushUndo();
+      const snapped = snapGrid(x, y);
+      pts.unshift({x: snapped.x, y: snapped.y});
+      dragStartWorld = {x: snapped.x, y: snapped.y};
+      dragDelta = {dx: 0, dy: 0};
+      dragging = {type:'node', idx: 0};
+      draw();
+      return;
+    }
+
+    // Check if clicking near last endpoint → append new point and drag it
+    const last = wa[wa.length - 1];
+    if (Math.hypot(x - last.x, y - last.y) < THRESH) {
+      pushUndo();
+      const snapped = snapGrid(x, y);
+      pts.push({x: snapped.x, y: snapped.y});
+      dragStartWorld = {x: snapped.x, y: snapped.y};
+      dragDelta = {dx: 0, dy: 0};
+      dragging = {type:'node', idx: pts.length - 1};
+      draw();
+      return;
+    }
+
+    // Otherwise insert along nearest segment
     const seg = nearestSegPoint(x, y);
     if (seg.dist < 20 / zoom) {
+      pushUndo();
       const snapped = snapGrid(seg.px, seg.py);
       pts.splice(seg.segIdx+1, 0, {x: snapped.x, y: snapped.y});
+      dragStartWorld = {x: snapped.x, y: snapped.y};
+      dragDelta = {dx: 0, dy: 0};
       dragging = {type:'node', idx:seg.segIdx+1};
       draw();
     }
@@ -1414,6 +1492,7 @@ function onDown(e) {
   if (mode === 'del') {
     const ni = hitNode(x, y);
     if (ni >= 0 && pts.length > 2) {
+      pushUndo();
       pts.splice(ni, 1);
       bestPos = null;
       draw();
@@ -1454,6 +1533,7 @@ function onUp() {
     const w = Math.abs(zoneDrag.cx - zoneDrag.wx);
     const h = Math.abs(zoneDrag.cy - zoneDrag.wy);
     if (w > 4 / zoom && h > 4 / zoom) {
+      pushUndo();
       zones.push({ x1: zoneDrag.wx, y1: zoneDrag.wy, x2: zoneDrag.cx, y2: zoneDrag.cy });
       bestPos = null;
     }
@@ -1466,7 +1546,7 @@ function onUp() {
 
 function onRadChange(v) {
   const n = parseFloat(v);
-  if (!isNaN(n) && n > 0) radius = n;
+  if (!isNaN(n) && n > 0) { pushUndo(); radius = n; }
   bestPos = null;
   invalidateHeatmap();
   draw();
@@ -1509,6 +1589,7 @@ function importPath() {
           if (!Array.isArray(p) || p.length < 2) throw new Error('Bad point');
           return {x: p[0], y: p[1]};
         });
+        pushUndo();
         pts = newPts;
         bestPos = null;
         draw();
@@ -1587,6 +1668,7 @@ function loadPreset(name) {
   const p = presets[name];
   if (!p) { presetStatus('Preset not found', false); return; }
   try {
+    pushUndo();
     pts = p.pts.map(([x, y]) => ({ x, y }));
     zones = (p.zones || []).map(([x1,y1,x2,y2]) => ({x1,y1,x2,y2}));
     if (p.radius) { radius = p.radius; document.getElementById('rad').value = radius; }
