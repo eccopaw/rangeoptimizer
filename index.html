@@ -394,10 +394,17 @@
     </div>
 
     <div class="panel">
+      <div class="panel-label">Visualize</div>
+      <button id="btn-heatmap" onclick="toggleHeatmap()" style="border-color:rgba(74,240,176,0.35);color:var(--text2)">&#9635; Heatmap: Off</button>
+      <p class="hint">Green = 100% covered · Red = 0%.<br>Uses current radius. Updates live.</p>
+    </div>
+
+    <div class="panel">
       <div class="panel-label">Import / Export</div>
       <button onclick="exportPath()">⎘ Copy path to clipboard</button>
       <button onclick="importPath()">⎗ Paste path from clipboard</button>
-      <p class="hint" id="io-status" style="margin-top:6px;min-height:14px;transition:opacity 0.4s"></p>
+      <p class="hint" style="color:var(--text3);margin-bottom:3px">Coords centered at (0,0) on export</p>
+      <p class="hint" id="io-status" style="min-height:14px;transition:opacity 0.4s"></p>
     </div>
 
     <div class="panel">
@@ -484,6 +491,10 @@ let dragStartWorld = null;
 let dragDelta = null;
 let animFrame = null;
 let sweepData = [];
+// Heatmap
+let heatmapOn = false;
+let heatmapDirty = true;
+let heatmapImageData = null;
 
 // Exclusion zones: array of {x1,y1,x2,y2} in world coords (axis-aligned rects)
 let zones = [];
@@ -548,6 +559,187 @@ function segChords(p1, p2, ox, oy, r) {
     {x: p1.x+ux*t0, y: p1.y+uy*t0},
     {x: p1.x+ux*t1, y: p1.y+uy*t1}
   ];
+}
+
+// --- Helpers ---
+function centeredCoords() {
+  const ap = worldArr();
+  if (!ap.length) return [];
+  const xs = ap.map(p => p.x), ys = ap.map(p => p.y);
+  const cx0 = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const cy0 = (Math.min(...ys) + Math.max(...ys)) / 2;
+  return ap.map(p => [Math.round(p.x - cx0), Math.round(p.y - cy0)]);
+}
+
+// --- Heatmap ---
+// Heatmap: two-pass async computation.
+// Pass 1 — collect raw overlap values for every cell.
+// Pass 2 — find min/max across all cells, then color-map relative to that range
+//          so the best cell is always bright green and the worst is always red.
+let heatmapJob = null;
+
+function heatmapColor(t) {
+  // t = 0 (worst) → red,  t = 1 (best) → bright green
+  let rr, gg, bb;
+  if (t < 0.5) {
+    const f = t * 2;
+    rr = 220; gg = Math.round(f * 195); bb = 30;
+  } else {
+    const f = (t - 0.5) * 2;
+    rr = Math.round((1 - f) * 220); gg = Math.round(180 + f * 60); bb = Math.round(30 + f * 50);
+  }
+  const alpha = 160;
+  return [rr, gg, bb, alpha];
+}
+
+function startHeatmapJob() {
+  if (heatmapJob) { heatmapJob.cancelled = true; }
+
+  const r  = wr();
+  const pl = pathLength();
+  if (pl < 0.001) { heatmapImageData = null; heatmapDirty = false; return; }
+
+  const PW   = Math.round(W * dpr);
+  const PH   = Math.round(H * dpr);
+  const CELL = Math.max(4, Math.round(dpr * 8));
+  const cols = Math.ceil(PW / CELL);
+  const rows = Math.ceil(PH / CELL);
+
+  // Snapshot geometry at job-start so pan/zoom mid-flight doesn't corrupt coords
+  const snapPanX = panX, snapPanY = panY, snapZoom = zoom;
+  function snapToWorld(sx, sy) {
+    return { x: (sx - snapPanX) / snapZoom, y: (sy - snapPanY) / snapZoom };
+  }
+
+  // Pass 1: raw overlap values per cell
+  const ovValues = new Float32Array(cols * rows);
+  const job = { cancelled: false, pass: 1, row: 0, cols, rows, CELL, PW, PH, r, ovValues };
+  heatmapJob = job;
+  heatmapDirty = false;
+
+  const ROWS_PER_FRAME = Math.max(1, Math.ceil(rows / 30));
+
+  function tickPass1() {
+    if (job.cancelled) return;
+    const endRow = Math.min(job.row + ROWS_PER_FRAME, rows);
+    for (let row = job.row; row < endRow; row++) {
+      for (let col = 0; col < cols; col++) {
+        const sx = (col * CELL + CELL * 0.5) / dpr;
+        const sy = (row * CELL + CELL * 0.5) / dpr;
+        const { x: wx, y: wy } = snapToWorld(sx, sy);
+        ovValues[row * cols + col] = totalOverlap(wx, wy, r);
+      }
+    }
+    job.row = endRow;
+    if (job.row < rows) { requestAnimationFrame(tickPass1); }
+    else                { requestAnimationFrame(tickPass2); }
+  }
+
+  function tickPass2() {
+    if (job.cancelled) return;
+    // Find actual min/max so the colour scale spans the real data range
+    let minOv = Infinity, maxOv = -Infinity;
+    for (let i = 0; i < ovValues.length; i++) {
+      if (ovValues[i] < minOv) minOv = ovValues[i];
+      if (ovValues[i] > maxOv) maxOv = ovValues[i];
+    }
+    const range = maxOv - minOv || 1;
+
+    const imgData = new ImageData(PW, PH);
+    const data    = imgData.data;
+
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const t = (ovValues[row * cols + col] - minOv) / range; // 0=worst, 1=best
+        const [rr, gg, bb, alpha] = heatmapColor(t);
+        const x0 = col * CELL, y0 = row * CELL;
+        const x1 = Math.min(x0 + CELL, PW), y1 = Math.min(y0 + CELL, PH);
+        for (let py = y0; py < y1; py++) {
+          const base = py * PW;
+          for (let px = x0; px < x1; px++) {
+            const idx = (base + px) * 4;
+            data[idx]   = rr; data[idx+1] = gg;
+            data[idx+2] = bb; data[idx+3] = alpha;
+          }
+        }
+      }
+    }
+
+    // Store min/max so the legend can show real percentages
+    job.minPct = minOv / pl * 100;
+    job.maxPct = maxOv / pl * 100;
+    heatmapImageData = imgData;
+    heatmapMinPct = job.minPct;
+    heatmapMaxPct = job.maxPct;
+    heatmapJob = null;
+    draw();
+  }
+
+  requestAnimationFrame(tickPass1);
+}
+
+let heatmapMinPct = 0, heatmapMaxPct = 100;
+
+function renderHeatmap() {
+  if (heatmapDirty) {
+    heatmapDirty = false;
+    startHeatmapJob();
+  }
+
+  if (!heatmapImageData) {
+    // Show a "computing…" label while pass 1 runs
+    ctx.font = '400 10px "IBM Plex Mono", monospace';
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.textAlign = 'left';
+    ctx.fillText('heatmap computing…', 14, H - 14);
+    return;
+  }
+
+  // Blit (putImageData bypasses the dpr transform)
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.putImageData(heatmapImageData, 0, 0);
+  ctx.restore();
+
+  // Legend bar with actual min/max labels
+  const lw = 90, lh = 9, lx = 14, ly = H - 26;
+  for (let i = 0; i < lw; i++) {
+    const [rr, gg, bb] = heatmapColor(i / lw);
+    ctx.fillStyle = `rgb(${rr},${gg},${bb})`;
+    ctx.fillRect(lx + i, ly, 1, lh);
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(lx, ly, lw, lh);
+  ctx.font = '400 9px "IBM Plex Mono", monospace';
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.textAlign = 'left';
+  ctx.fillText(heatmapMinPct.toFixed(1) + '%', lx, ly + lh + 10);
+  ctx.textAlign = 'right';
+  ctx.fillText(heatmapMaxPct.toFixed(1) + '%', lx + lw, ly + lh + 10);
+  ctx.textAlign = 'left';
+}
+
+function toggleHeatmap() {
+  heatmapOn = !heatmapOn;
+  heatmapDirty = true;
+  const btn = document.getElementById('btn-heatmap');
+  if (heatmapOn) {
+    btn.textContent = '⬛ Heatmap: On';
+    btn.style.borderColor = 'var(--accent)';
+    btn.style.color = 'var(--accent)';
+  } else {
+    btn.textContent = '⬛ Heatmap: Off';
+    btn.style.borderColor = 'rgba(74,240,176,0.35)';
+    btn.style.color = 'var(--text2)';
+  }
+  draw();
+}
+
+function invalidateHeatmap() {
+  heatmapDirty = true;
+  heatmapImageData = null;
+  if (heatmapJob) { heatmapJob.cancelled = true; heatmapJob = null; }
 }
 
 // --- Sweep ---
@@ -754,6 +946,22 @@ function resetPath() {
 }
 
 // --- Drawing ---
+// Polyfill for ctx.roundRect (not available in all engines)
+function roundRect(ctx2, x, y, w, h, rad) {
+  rad = Math.min(rad, w/2, h/2);
+  ctx2.beginPath();
+  ctx2.moveTo(x + rad, y);
+  ctx2.lineTo(x + w - rad, y);
+  ctx2.arcTo(x + w, y, x + w, y + rad, rad);
+  ctx2.lineTo(x + w, y + h - rad);
+  ctx2.arcTo(x + w, y + h, x + w - rad, y + h, rad);
+  ctx2.lineTo(x + rad, y + h);
+  ctx2.arcTo(x, y + h, x, y + h - rad, rad);
+  ctx2.lineTo(x, y + rad);
+  ctx2.arcTo(x, y, x + rad, y, rad);
+  ctx2.closePath();
+}
+
 function draw() {
   ctx.clearRect(0,0,W,H);
 
@@ -761,6 +969,9 @@ function draw() {
   const wa = worldArr();    // world positions
   const ocx = cx(), ocy = cy(), r = cr(); // screen circle
   const wox = wcx(), woy = wcy();         // world circle center
+
+  // Heatmap (drawn beneath everything)
+  if (heatmapOn) renderHeatmap();
 
   // Background grid (account for pan/zoom)
   const gridScreen = GRID * zoom;
@@ -841,6 +1052,37 @@ function draw() {
     ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(ap[i].x, ap[i].y, 5, 0, Math.PI*2);
     ctx.fill(); ctx.stroke();
+  }
+
+  // Segment length labels in move mode
+  if (mode === 'move') {
+    ctx.font = '400 10px "IBM Plex Mono", monospace';
+    ctx.textAlign = 'center';
+    for (let i = 0; i < wa.length - 1; i++) {
+      const segLen = Math.hypot(wa[i+1].x - wa[i].x, wa[i+1].y - wa[i].y);
+      const label = segLen.toFixed(1);
+      // midpoint screen
+      const mx = (ap[i].x + ap[i+1].x) / 2;
+      const my = (ap[i].y + ap[i+1].y) / 2;
+      // perpendicular offset (always render label on one side)
+      const sdx = ap[i+1].x - ap[i].x, sdy = ap[i+1].y - ap[i].y;
+      const slen = Math.hypot(sdx, sdy) || 1;
+      const nx = -sdy / slen, ny = sdx / slen;
+      const off = 13;
+      const lx = mx + nx * off, ly = my + ny * off;
+      // only show when segment is long enough on screen to be readable
+      const screenLen = Math.hypot(ap[i+1].x - ap[i].x, ap[i+1].y - ap[i].y);
+      if (screenLen < 30) continue;
+      const tw = ctx.measureText(label).width;
+      ctx.globalAlpha = Math.min(1, (screenLen - 30) / 40);
+      ctx.fillStyle = 'rgba(13,15,18,0.78)';
+      roundRect(ctx, lx - tw/2 - 4, ly - 8, tw + 8, 13, 3);
+      ctx.fill();
+      ctx.fillStyle = '#7a8099';
+      ctx.fillText(label, lx, ly + 2);
+    }
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'left';
   }
 
   // Best position ring (bestPos stored in world coords)
@@ -953,8 +1195,7 @@ function draw() {
     const lx = labelAnchor.x + 14;
     const ly = labelAnchor.y - 22;
     ctx.fillStyle = 'rgba(13,15,18,0.85)';
-    ctx.beginPath();
-    ctx.roundRect(lx - pad, ly - lh + 3, metrics.width + pad * 2, lh + 4, 3);
+    roundRect(ctx, lx - pad, ly - lh + 3, metrics.width + pad * 2, lh + 4, 3);
     ctx.fill();
     ctx.fillStyle = '#f0b04a';
     ctx.fillText(label, lx, ly);
@@ -1083,6 +1324,7 @@ canvas.addEventListener('wheel', e => {
   panY = sy - (sy - panY) * scale;
   zoom = newZoom;
   bestPos = null;
+  invalidateHeatmap();
   draw();
 }, {passive: false});
 
@@ -1113,6 +1355,7 @@ window.addEventListener('mousemove', e => {
   if (panning) {
     panX = e.clientX - panStart.x;
     panY = e.clientY - panStart.y;
+    invalidateHeatmap();
     draw();
   }
 });
@@ -1201,6 +1444,7 @@ function onMove(e) {
     pts[dragging.idx] = {x: snapped.x, y: snapped.y};
     if (dragStartWorld) dragDelta = {dx: snapped.x - dragStartWorld.x, dy: snapped.y - dragStartWorld.y};
     bestPos = null;
+    invalidateHeatmap();
   }
   draw();
 }
@@ -1224,6 +1468,7 @@ function onRadChange(v) {
   const n = parseFloat(v);
   if (!isNaN(n) && n > 0) radius = n;
   bestPos = null;
+  invalidateHeatmap();
   draw();
 }
 
@@ -1238,8 +1483,7 @@ function ioStatus(msg, ok) {
 }
 
 function exportPath() {
-  const ap = worldArr();
-  const text = JSON.stringify(ap.map(p => [Math.round(p.x), Math.round(p.y)]));
+  const text = JSON.stringify(centeredCoords());
   navigator.clipboard.writeText(text)
     .then(() => ioStatus('Copied!', true))
     .catch(() => {
@@ -1321,12 +1565,16 @@ function savePreset() {
   const name = nameEl.value.trim();
   if (!name) { presetStatus('Enter a name first', false); return; }
   const presets = getCookiePresets();
+  const centered = centeredCoords();
   const wa = worldArr();
+  const xs = wa.map(p => p.x), ys = wa.map(p => p.y);
+  const ox = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const oy = (Math.min(...ys) + Math.max(...ys)) / 2;
   presets[name] = {
-    pts: wa.map(p => [Math.round(p.x), Math.round(p.y)]),
-    zones: zones.map(z => [z.x1, z.y1, z.x2, z.y2]),
+    pts: centered,
+    zones: zones.map(z => [z.x1 - ox, z.y1 - oy, z.x2 - ox, z.y2 - oy]),
     radius,
-    circle: [Math.round(wcx()), Math.round(wcy())]
+    circle: [Math.round(wcx() - ox), Math.round(wcy() - oy)]
   };
   setCookiePresets(presets);
   nameEl.value = '';
