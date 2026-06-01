@@ -1656,6 +1656,11 @@ const BUILTIN_PRESETS = {
     zones: [], radius: 5,
     circle: {x:16, y:-45}
   },
+  'castle': {
+    pts: [[-1,-44],[-1,-28],[15,-28],[15,-11],[-1,-11],[-1,11],[-14,11],[-14,22],[-1,22],[-1,44]].map(([x,y]) => ({x,y})),
+    zones: [], radius: 5,
+    circle: {x:-1, y:-44}
+  },
   'midnight road': {
     pts: [[2,-42],[2,-27],[17,-27],[17,-13],[-10,-13],[-10,-26],[-22,-26],[-22,0],[23,0],[23,16],[10,16],[10,11],[-10,11],[-10,26],[2,26],[2,42]].map(([x,y]) => ({x,y})),
     zones: [], radius: 5,
@@ -1759,8 +1764,9 @@ function renderPresets() {
   for (const name of sorted) {
     const builtin = isBuiltin(name);
     const safeName = name.replace(/'/g, "\\'");
+    const len = presetPathLength(allPresets[name]).toFixed(1);
     html += `<div class="preset-item">
-      <span title="${name}" onclick="loadPreset('${safeName}')">▷ ${name}</span>
+      <span title="${name} — length: ${len}" onclick="loadPreset('${safeName}')">▷ ${name}</span>
       ${builtin
         ? `<span style="font-size:9px;color:var(--text3);padding:0 4px;flex-shrink:0">built-in</span>`
         : `<button onclick="deletePreset('${safeName}')">✕</button>`}
