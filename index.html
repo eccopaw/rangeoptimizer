@@ -246,7 +246,6 @@
     position: relative;
   }
 
-  #sweep-canvas { display: block; width: 100%; height: 100%; }
 
   footer {
     padding: 8px 16px;
@@ -293,7 +292,6 @@
 
   /* Things hidden at small width */
   .sb-sm .hint { display: none; }
-  .sb-sm .sweep-panel { display: none; }
   .sb-sm .stat-extra { display: none; }
   .sb-sm .panel-label { display: none; }
 
@@ -308,7 +306,6 @@
   .sb-xl .hint { max-height: none; }
 
   /* Sweep bar taller at xl */
-  .sb-xl .sweep-bar { height: 60px; }
 
   /* Extra detail panel only at xl */
   .detail-panel { display: none; }
@@ -426,8 +423,6 @@
 <script>
 const canvas = document.getElementById('main');
 const ctx = canvas.getContext('2d');
-const sweepEl = document.getElementById('sweep-canvas');
-const sweepCtx = sweepEl.getContext('2d');
 
 let W, H;
 let dpr = window.devicePixelRatio || 1;
@@ -459,12 +454,7 @@ function resize() {
   canvas.style.width = W + 'px';
   canvas.style.height = H + 'px';
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  sweepEl.width = sweepEl.parentElement.clientWidth * dpr;
-  sweepEl.height = 36 * dpr;
-  sweepEl.style.width = '100%';
-  sweepEl.style.height = '36px';
-  sweepCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  if (!resizeDone) { resizeDone = true; resetPath(); } else { draw(); }
+  if (!resizeDone) { resizeDone = true; loadPreset('midnight road'); } else { draw(); }
 }
 
 let resizeDone = false;
@@ -482,7 +472,6 @@ let dragging = null;
 let dragStartWorld = null;
 let dragDelta = null;
 let animFrame = null;
-let sweepData = [];
 // Heatmap
 let heatmapOn = false;
 let heatmapDirty = true;
@@ -750,78 +739,6 @@ function invalidateHeatmap() {
   if (heatmapJob) { heatmapJob.cancelled = true; heatmapJob = null; }
 }
 
-// --- Sweep ---
-function buildSweep() {
-  const ap = worldArr();
-  const STEPS = 200;
-  sweepData = [];
-  let cumLen = 0;
-  const segs = [];
-  for (let i = 0; i < ap.length-1; i++) {
-    const l = Math.hypot(ap[i+1].x-ap[i].x, ap[i+1].y-ap[i].y);
-    segs.push({p1:ap[i], p2:ap[i+1], len:l, start:cumLen});
-    cumLen += l;
-  }
-  for (let s = 0; s <= STEPS; s++) {
-    const t = s/STEPS * cumLen;
-    // find point on path at arc-len t
-    let rem = t, px2 = ap[0].x, py2 = ap[0].y;
-    for (const seg of segs) {
-      if (rem <= seg.len || seg === segs[segs.length-1]) {
-        const frac = Math.min(rem / Math.max(seg.len, 0.001), 1);
-        px2 = seg.p1.x + (seg.p2.x-seg.p1.x)*frac;
-        py2 = seg.p1.y + (seg.p2.y-seg.p1.y)*frac;
-        break;
-      }
-      rem -= seg.len;
-    }
-    sweepData.push({t, px: px2, py: py2, ov: totalOverlap(px2, py2, wr())});
-  }
-}
-
-function drawSweep() {
-  const sw = sweepEl.parentElement.clientWidth;
-  const sh = 36;
-  sweepCtx.clearRect(0, 0, sw, sh);
-  if (sweepData.length < 2) return;
-  const maxOv = Math.max(...sweepData.map(d=>d.ov), 0.001);
-  const totalL = sweepData[sweepData.length-1].t;
-
-  // fill
-  sweepCtx.beginPath();
-  sweepCtx.moveTo(0, sh);
-  sweepData.forEach(d => {
-    const x = (d.t / totalL) * sw;
-    const y = sh - (d.ov / maxOv) * (sh - 4);
-    sweepCtx.lineTo(x, y);
-  });
-  sweepCtx.lineTo(sw, sh);
-  sweepCtx.closePath();
-  sweepCtx.fillStyle = 'rgba(74,240,176,0.08)';
-  sweepCtx.fill();
-
-  // line
-  sweepCtx.beginPath();
-  sweepData.forEach((d, i) => {
-    const x = (d.t / totalL) * sw;
-    const y = sh - (d.ov / maxOv) * (sh - 4);
-    i === 0 ? sweepCtx.moveTo(x,y) : sweepCtx.lineTo(x,y);
-  });
-  sweepCtx.strokeStyle = '#4af0b0';
-  sweepCtx.lineWidth = 1.5;
-  sweepCtx.stroke();
-
-  // best tick
-  const bestD = sweepData.reduce((a,b) => b.ov > a.ov ? b : a);
-  const bx = (bestD.t / totalL) * sw;
-  sweepCtx.strokeStyle = '#f0b04a';
-  sweepCtx.lineWidth = 1;
-  sweepCtx.beginPath();
-  sweepCtx.moveTo(bx, 0);
-  sweepCtx.lineTo(bx, sh);
-  sweepCtx.stroke();
-}
-
 // --- Optimize ---
 function findBest() {
   const r = wr();
@@ -937,18 +854,10 @@ function fitView() {
 function resetPath() {
   pushUndo();
   pts = [
-    {x: 10,  y: 50},
-    {x: 30,  y: 50},
-    {x: 30,  y: 30},
-    {x: 58,  y: 30},
-    {x: 58,  y: 70},
-    {x: 82,  y: 70},
-    {x: 82,  y: 40},
-    {x: 92,  y: 40},
+    {x: -10, y: 0},
+    {x:  10, y: 0},
   ];
-  circle = { x: pts[1].x, y: pts[1].y };
-  radius = 5;
-  document.getElementById('rad').value = 5;
+  circle = { x: pts[0].x, y: pts[0].y };
   bestPos = null;
   fitView();
   draw();
@@ -1230,8 +1139,6 @@ function draw() {
     }
   }
 
-  buildSweep();
-  drawSweep();
 }
 
 // --- Undo ---
