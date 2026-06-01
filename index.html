@@ -1738,25 +1738,32 @@ function deletePreset(name) {
   presetStatus(`Deleted "${name}"`, true);
 }
 
+function presetPathLength(p) {
+  const pts2 = p.pts.map(pt => Array.isArray(pt) ? {x: pt[0], y: pt[1]} : {x: pt.x, y: pt.y});
+  let l = 0;
+  for (let i = 0; i < pts2.length - 1; i++) l += Math.hypot(pts2[i+1].x - pts2[i].x, pts2[i+1].y - pts2[i].y);
+  return l;
+}
+
 function renderPresets() {
   const list = document.getElementById('preset-list');
   const userPresets = getCookiePresets();
-  const userNames = Object.keys(userPresets);
-  const builtinNames = Object.keys(BUILTIN_PRESETS);
+  const allPresets = { ...BUILTIN_PRESETS, ...userPresets };
+  const isBuiltin = name => name in BUILTIN_PRESETS;
+
+  const sorted = Object.keys(allPresets).sort((a, b) =>
+    presetPathLength(allPresets[a]) - presetPathLength(allPresets[b])
+  );
 
   let html = '';
-  // Built-in presets (no delete button)
-  for (const name of builtinNames) {
+  for (const name of sorted) {
+    const builtin = isBuiltin(name);
+    const safeName = name.replace(/'/g, "\\'");
     html += `<div class="preset-item">
-      <span title="${name}" onclick="loadPreset('${name}')">▷ ${name}</span>
-      <span style="font-size:9px;color:var(--text3);padding:0 4px;flex-shrink:0">built-in</span>
-    </div>`;
-  }
-  // User presets
-  for (const name of userNames) {
-    html += `<div class="preset-item">
-      <span title="${name}" onclick="loadPreset('${name.replace(/'/g,"\\'")}')">▷ ${name}</span>
-      <button onclick="deletePreset('${name.replace(/'/g,"\\'")}')">✕</button>
+      <span title="${name}" onclick="loadPreset('${safeName}')">▷ ${name}</span>
+      ${builtin
+        ? `<span style="font-size:9px;color:var(--text3);padding:0 4px;flex-shrink:0">built-in</span>`
+        : `<button onclick="deletePreset('${safeName}')">✕</button>`}
     </div>`;
   }
   if (!html) html = '<p class="hint">No presets saved yet.</p>';
