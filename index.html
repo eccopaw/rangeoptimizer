@@ -579,17 +579,33 @@ function centeredCoords() {
 let heatmapJob = null;
 
 function heatmapColor(t) {
-  // t = 0 (worst) → red,  t = 1 (best) → bright green
-  let rr, gg, bb;
-  if (t < 0.5) {
-    const f = t * 2;
-    rr = 220; gg = Math.round(f * 195); bb = 30;
-  } else {
-    const f = (t - 0.5) * 2;
-    rr = Math.round((1 - f) * 220); gg = Math.round(180 + f * 60); bb = Math.round(30 + f * 50);
+  // t = 0 (worst) → red … t = 1 (best) → pink
+  // Stops (t → [r,g,b]):
+  //   0.00 → red        [220, 30,  30 ]
+  //   0.25 → orange     [230, 120, 20 ]
+  //   0.50 → yellow     [210, 200, 20 ]
+  //   0.70 → green      [40,  200, 60 ]
+  //   0.85 → blue       [50,  120, 230]
+  //   1.00 → pink       [240, 80,  200]
+  const stops = [
+    [0.00, 220, 30,  30 ],
+    [0.25, 230, 120, 20 ],
+    [0.50, 210, 200, 20 ],
+    [0.70, 40,  200, 60 ],
+    [0.85, 50,  120, 230],
+    [1.00, 240, 80,  200],
+  ];
+  // Find surrounding stops and lerp
+  let lo = stops[0], hi = stops[stops.length - 1];
+  for (let i = 0; i < stops.length - 1; i++) {
+    if (t >= stops[i][0] && t <= stops[i+1][0]) { lo = stops[i]; hi = stops[i+1]; break; }
   }
-  const alpha = 160;
-  return [rr, gg, bb, alpha];
+  const range = hi[0] - lo[0];
+  const f = range < 0.0001 ? 0 : (t - lo[0]) / range;
+  const rr = Math.round(lo[1] + (hi[1] - lo[1]) * f);
+  const gg = Math.round(lo[2] + (hi[2] - lo[2]) * f);
+  const bb = Math.round(lo[3] + (hi[3] - lo[3]) * f);
+  return [rr, gg, bb, 170];
 }
 
 function startHeatmapJob() {
