@@ -1074,9 +1074,9 @@ function draw() {
   const pct2 = pl2 > 0 ? (ov / pl2 * 100) : 0;
   ctx.font = '400 11px "IBM Plex Mono", monospace';
   ctx.fillStyle = '#4ab4f0';
-  ctx.fillText(`r=${radius.toFixed(1)}`, labelX, labelY);
+  ctx.fillText(`range=${radius.toFixed(1)}`, labelX, labelY);
   ctx.fillStyle = '#4af0b0';
-  ctx.fillText(`∩=${ov.toFixed(1)}px`, labelX, labelY + 14);
+  ctx.fillText(`coverage=${ov.toFixed(1)} studs`, labelX, labelY + 14);
   ctx.fillStyle = '#f0b04a';
   ctx.fillText(`${pct2.toFixed(1)}% covered`, labelX, labelY + 28);
 
@@ -1121,9 +1121,9 @@ function draw() {
 
   // Update stats (world coords)
   document.getElementById('pos').textContent = `${Math.round(wox)}, ${Math.round(woy)}`;
-  document.getElementById('ov').textContent = ov.toFixed(1) + ' px';
+  document.getElementById('ov').textContent = ov.toFixed(1) + ' studs';
   const pl = pathLength();
-  document.getElementById('plen').textContent = Math.round(pl) + ' px';
+  document.getElementById('plen').textContent = Math.round(pl) + ' studs';
   document.getElementById('pct').textContent = pl > 0 ? (ov/pl*100).toFixed(1) + '%' : '—';
   const undoEl = document.getElementById('undo-count');
   if (undoEl) undoEl.textContent = undoStack.length ? `(${undoStack.length})` : '';
