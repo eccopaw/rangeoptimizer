@@ -6,526 +6,334 @@
 <title>Range Tester</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
-
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
-    --bg: #0d0f12;
-    --surface: #141720;
-    --surface2: #1c2030;
-    --border: rgba(255,255,255,0.08);
-    --border2: rgba(255,255,255,0.14);
-    --text: #e8eaf0;
-    --text2: #7a8099;
-    --text3: #4a5068;
-    --accent: #4af0b0;
-    --accent2: #4ab4f0;
-    --warn: #f0b04a;
-    --danger: #f04a6a;
-    --mono: 'IBM Plex Mono', monospace;
-    --sans: 'IBM Plex Sans', sans-serif;
+    --bg: #0d0f12; --surface: #141720; --surface2: #1c2030;
+    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
+    --text: #e8eaf0; --text2: #7a8099; --text3: #4a5068;
+    --accent: #4af0b0; --accent2: #4ab4f0; --warn: #f0b04a;
+    --danger: #f04a6a; --orbital: #c084fc;
+    --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
   }
-
-  html, body {
-    height: 100%;
-    overflow: hidden;
-  }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    font-weight: 300;
-    display: flex;
-    flex-direction: column;
-    user-select: none;
-  }
-
-  header {
-    padding: 18px 24px 14px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: baseline;
-    gap: 20px;
-    flex-wrap: wrap;
-  }
-
-  header h1 {
-    font-family: var(--mono);
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--accent);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  header p {
-    font-size: 12px;
-    color: var(--text3);
-    font-family: var(--mono);
-  }
-
-  .main {
-    display: flex;
-    flex: 1;
-    gap: 0;
-    overflow: hidden;
-    min-height: 0;
-  }
-
-  .canvas-wrap {
-    flex: 1;
-    position: relative;
-    overflow: hidden;
-  }
-
-  canvas {
-    display: block;
-    width: 100%;
-    height: 100%;
-    cursor: crosshair;
-  }
-
-  .sidebar {
-    width: var(--sidebar-w, 220px);
-    min-width: 140px;
-    max-width: 480px;
-    border-left: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    flex-shrink: 0;
-    font-size: var(--sidebar-scale, 1) * 1em;
-  }
-
-  .sidebar-resize {
-    width: 5px;
-    cursor: ew-resize;
-    background: transparent;
-    border-left: 1px solid var(--border);
-    flex-shrink: 0;
-    position: relative;
-    z-index: 10;
-    transition: background 0.15s;
-  }
-  .sidebar-resize:hover, .sidebar-resize.dragging {
-    background: rgba(74,180,240,0.18);
-    border-left-color: var(--accent2);
-  }
-
-  .panel {
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .panel-label {
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 500;
-    color: var(--text3);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-  }
-
-  .stat-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 6px;
-  }
-
-  .stat-label {
-    font-size: 11px;
-    color: var(--text2);
-    font-family: var(--mono);
-  }
-
-  .stat-value {
-    font-size: 13px;
-    font-family: var(--mono);
-    font-weight: 500;
-    color: var(--text);
-  }
-
+  html, body { height: 100%; overflow: hidden; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); font-weight: 300; display: flex; flex-direction: column; user-select: none; }
+  header { padding: 14px 20px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  header h1 { font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase; }
+  header p { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+  .main { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+  .canvas-wrap { flex: 1; position: relative; overflow: hidden; }
+  canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+  .sidebar { width: 220px; min-width: 140px; border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; flex-shrink: 0; }
+  .panel { padding: 9px 14px; border-bottom: 1px solid var(--border); }
+  .panel-label { font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--text3); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 7px; }
+  .stat-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+  .stat-label { font-size: 11px; color: var(--text2); font-family: var(--mono); }
+  .stat-value { font-size: 12px; font-family: var(--mono); font-weight: 500; color: var(--text); }
   .stat-value.accent { color: var(--accent); }
-  .stat-value.warn   { color: var(--warn); }
-  .stat-value.blue   { color: var(--accent2); }
-
-  .slider-row {
-    margin-bottom: 10px;
-  }
-
-  .slider-row label {
-    display: flex;
-    justify-content: space-between;
-    font-size: 11px;
-    color: var(--text2);
-    font-family: var(--mono);
-    margin-bottom: 4px;
-  }
-
-  input[type=range] {
-    -webkit-appearance: none;
-    width: 100%;
-    height: 2px;
-    background: var(--surface2);
-    border-radius: 1px;
-    outline: none;
-  }
-
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: var(--accent);
-    cursor: pointer;
-    transition: transform 0.1s;
-  }
-
+  .stat-value.warn { color: var(--warn); }
+  .stat-value.blue { color: var(--accent2); }
+  .stat-value.purple { color: var(--orbital); }
+  .slider-row { margin-bottom: 8px; }
+  .slider-row label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text2); font-family: var(--mono); margin-bottom: 3px; }
+  input[type=range] { -webkit-appearance: none; width: 100%; height: 2px; background: var(--surface2); border-radius: 1px; outline: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 11px; height: 11px; border-radius: 50%; background: var(--accent); cursor: pointer; transition: transform 0.1s; }
   input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.3); }
-
-  button {
-    width: 100%;
-    padding: 7px 12px;
-    background: transparent;
-    border: 1px solid var(--border2);
-    border-radius: 4px;
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.06em;
-    cursor: pointer;
-    text-transform: uppercase;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
-    margin-bottom: 6px;
-  }
-
+  button { width: 100%; padding: 6px 10px; background: transparent; border: 1px solid var(--border2); border-radius: 4px; color: var(--text); font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: 0.06em; cursor: pointer; text-transform: uppercase; transition: background 0.15s, border-color 0.15s, color 0.15s; margin-bottom: 5px; }
   button:hover { background: var(--surface2); border-color: var(--accent); color: var(--accent); }
   button.primary { border-color: var(--accent); color: var(--accent); }
   button.primary:hover { background: rgba(74,240,176,0.08); }
+  button.purple-btn { border-color: var(--orbital); color: var(--orbital); }
+  button.purple-btn:hover { background: rgba(192,132,252,0.10); }
+  button.purple-btn.active { background: rgba(192,132,252,0.14); }
   button.danger { border-color: var(--danger); color: var(--danger); }
   button.danger:hover { background: rgba(240,74,106,0.08); }
-
-  .hint {
-    font-size: 10px;
-    color: var(--text3);
-    font-family: var(--mono);
-    line-height: 1.6;
-    margin-top: 4px;
-  }
-
-  .mode-row {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 10px;
-  }
-
-  .mode-btn {
-    flex: 1;
-    padding: 6px 4px;
-    font-size: 10px;
-    margin-bottom: 0;
-  }
-
-  .mode-btn.active {
-    background: var(--surface2);
-    border-color: var(--accent2);
-    color: var(--accent2);
-  }
-
-  .sweep-bar {
-    width: 100%;
-    height: 36px;
-    background: var(--surface2);
-    border-radius: 3px;
-    overflow: hidden;
-    margin-top: 8px;
-    position: relative;
-  }
-
-
-  footer {
-    padding: 8px 16px;
-    border-top: 1px solid var(--border);
-    font-size: 10px;
-    color: var(--text3);
-    font-family: var(--mono);
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-  }
-
-  .preset-item {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 4px 6px;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text2);
-  }
-  .preset-item span {
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    cursor: pointer;
-    color: var(--text);
-  }
-  .preset-item span:hover { color: var(--accent2); }
-  .preset-item button {
-    width: auto;
-    padding: 2px 6px;
-    font-size: 10px;
-    margin-bottom: 0;
-    border-radius: 3px;
-    flex-shrink: 0;
-  }
-
-  /* Progressive disclosure based on sidebar width */
-
-  /* Things hidden at small width */
-  .sb-sm .hint { display: none; }
-  .sb-sm .stat-extra { display: none; }
-  .sb-sm .panel-label { display: none; }
-
-  /* Things only visible at large width */
-  .stat-extra { display: none; }
-  .sb-lg .stat-extra { display: flex; }
-  .sb-xl .stat-extra { display: flex; }
-
-  /* Hints collapse to 2 lines at md, expand fully at lg+ */
-  .hint { overflow: hidden; max-height: 2.4em; }
-  .sb-lg .hint { max-height: none; }
-  .sb-xl .hint { max-height: none; }
-
-  /* Sweep bar taller at xl */
-
-  /* Extra detail panel only at xl */
-  .detail-panel { display: none; }
-  .sb-xl .detail-panel { display: block; }
-
-  footer span { display: flex; gap: 6px; }
+  .hint { font-size: 10px; color: var(--text3); font-family: var(--mono); line-height: 1.55; margin-top: 3px; }
+  .mode-row { display: flex; gap: 3px; margin-bottom: 7px; }
+  .mode-btn { flex: 1; padding: 5px 3px; font-size: 10px; margin-bottom: 0; }
+  .mode-btn.active { background: var(--surface2); border-color: var(--accent2); color: var(--accent2); }
+  .seg-toggle { display: flex; gap: 3px; margin-bottom: 7px; }
+  .seg-btn { flex: 1; padding: 5px 3px; font-size: 10px; margin-bottom: 0; }
+  .seg-btn.active { background: var(--surface2); border-color: var(--orbital); color: var(--orbital); }
+  footer { padding: 6px 14px; border-top: 1px solid var(--border); font-size: 10px; color: var(--text3); font-family: var(--mono); display: flex; gap: 16px; flex-wrap: wrap; }
+  footer span { display: flex; gap: 5px; }
   footer b { color: var(--text2); font-weight: 500; }
+  .inline-num { width: 58px; padding: 2px 5px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 3px; color: var(--text); font-family: var(--mono); font-size: 11px; font-weight: 500; outline: none; text-align: right; -moz-appearance: textfield; }
+  .inline-num::-webkit-outer-spin-button, .inline-num::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .inline-num:focus { border-color: var(--accent2); color: var(--accent2); }
+  .num-input { width: 100%; padding: 5px 8px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 4px; color: var(--text); font-family: var(--mono); font-size: 12px; outline: none; }
+  .num-input:focus { border-color: var(--accent2); }
+  .orbital-section { border-left: 2px solid var(--orbital); padding-left: 9px; margin-top: 3px; }
+  .divider { width: 100%; height: 1px; background: var(--border); margin: 6px 0; }
+  .preset-item { display: flex; align-items: center; gap: 4px; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; font-family: var(--mono); font-size: 10px; color: var(--text2); margin-bottom: 4px; }
+  .preset-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; color: var(--text); }
+  .preset-item span:hover { color: var(--accent2); }
+  .preset-item button { width: auto; padding: 2px 5px; font-size: 9px; margin-bottom: 0; border-radius: 3px; flex-shrink: 0; }
+  .preset-item .del-btn { border-color: rgba(240,74,106,0.4); color: rgba(240,74,106,0.7); }
+  .preset-item .del-btn:hover { border-color: var(--danger); color: var(--danger); background: rgba(240,74,106,0.08); }
+  .text-input { width: 100%; padding: 4px 7px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 4px; color: var(--text); font-family: var(--mono); font-size: 11px; outline: none; }
+  .text-input:focus { border-color: var(--accent2); }
+  .musthit-btn.active { background: rgba(255,200,60,0.12); border-color: #ffc83c; color: #ffc83c; }
 </style>
 </head>
 <body>
-
 <header>
   <h1>Range Optimization Testing</h1>
-  <p>find where a circle maximally intersects a rectilinear polyline</p>
+  <p id="header-sub">find where a circle maximally intersects a rectilinear polyline</p>
 </header>
-
 <div class="main">
-  <div class="canvas-wrap">
-    <canvas id="main"></canvas>
-  </div>
-
-  <div class="sidebar-resize" id="sb-resize"></div>
+  <div class="canvas-wrap"><canvas id="main"></canvas></div>
   <div class="sidebar" id="sidebar">
+
+    <!-- MODE -->
     <div class="panel">
       <div class="panel-label">Mode</div>
       <div class="mode-row">
         <button class="mode-btn active" id="btn-move" onclick="setMode('move')">Move</button>
-        <button class="mode-btn" id="btn-add" onclick="setMode('add')">Add pt</button>
-        <button class="mode-btn" id="btn-del" onclick="setMode('del')">Del pt</button>
+        <button class="mode-btn" id="btn-add" onclick="setMode('add')">Add</button>
+        <button class="mode-btn" id="btn-del" onclick="setMode('del')">Del</button>
       </div>
       <div class="mode-row">
         <button class="mode-btn" id="btn-zone" onclick="setMode('zone')" style="border-color:rgba(240,74,106,0.5);color:#f04a6a">⬛ Zone</button>
         <button class="mode-btn" id="btn-zonedel" onclick="setMode('zonedel')" style="border-color:rgba(240,74,106,0.3);color:#c03050">✕ Erase</button>
         <button class="mode-btn danger" onclick="clearZones()" style="flex:0.7;margin-bottom:0">All</button>
       </div>
-      <p class="hint">Move: drag circle or path points.<br>Add pt: click path/endpoints to extend or insert.<br>Del pt: click node to remove.<br>Zone: drag to paint no-go areas.<br>Erase: click a zone to remove.<br><b>Right-click drag</b> to pan.<br><b>Ctrl+Z</b> to undo <span id="undo-count" style="color:var(--text3)"></span></p>
+      <div class="mode-row">
+        <button class="mode-btn musthit-btn" id="btn-musthit" onclick="setMode('musthit')" style="border-color:rgba(255,200,60,0.5);color:#ffc83c">◎ Must Hit</button>
+        <button class="mode-btn danger" id="btn-clearmh" onclick="clearMustHit()" style="flex:0.7;margin-bottom:0;border-color:rgba(255,200,60,0.4);color:#c09020">✕ Clear</button>
+      </div>
+      <p class="hint">Move: drag circle/pts · Add: click path · Del: click node · Zone: drag exclusion · <b>Must Hit</b>: click to place required point · <b>Ctrl+Z</b> undo <span id="undo-count" style="color:var(--text3)"></span></p>
     </div>
 
+    <!-- SENSOR MODE -->
     <div class="panel">
-      <div class="panel-label">Circle</div>
-      <div class="slider-row">
-        <label><span>Radius</span></label>
-        <input type="number" id="rad" min="0.1" max="9999" value="5" step="1" oninput="onRadChange(this.value)" style="width:100%;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
+      <div class="panel-label">Sensor Mode</div>
+      <div class="seg-toggle">
+        <button class="seg-btn active" id="btn-standard" onclick="setSensorMode('standard')">Standard</button>
+        <button class="seg-btn" id="btn-orbital" onclick="setSensorMode('orbital')">Orbital</button>
       </div>
+
+      <!-- Standard controls -->
+      <div id="standard-controls">
+        <div class="slider-row">
+          <label><span>Range</span><input type="number" class="inline-num" id="diam-label" min="0.1" max="9999" step="0.1" value="5" oninput="onDiamTyped(this.value)"></label>
+          <input type="range" id="diam-slider" min="0.1" max="100" step="0.1" value="5" oninput="onDiamChange(this.value)">
+        </div>
+      </div>
+
+      <!-- Orbital controls -->
+      <div id="orbital-controls" style="display:none">
+        <div class="orbital-section">
+          <p class="hint" style="color:var(--orbital);margin-bottom:7px">Scout center orbits anchor circumference. Best position = most track coverage over full orbit.</p>
+          <div class="slider-row">
+            <label><span>Anchor R</span><input type="number" class="inline-num" id="anchor-rad-label" min="0.1" max="9999" step="0.5" value="14" oninput="onAnchorTyped(this.value)"></label>
+            <input type="range" id="anchor-rad-slider" min="0.1" max="100" step="0.5" value="14" oninput="onAnchorRadChange(this.value)">
+          </div>
+          <div class="slider-row">
+            <label><span>Scout R</span><input type="number" class="inline-num" id="scout-rad-label" min="0.1" max="9999" step="0.5" value="6" oninput="onScoutTyped(this.value)"></label>
+            <input type="range" id="scout-rad-slider" min="0.1" max="100" step="0.5" value="6" oninput="onScoutRadChange(this.value)">
+          </div>
+          <div class="divider"></div>
+          <div class="panel-label" style="margin-bottom:5px">Animation</div>
+          <div class="seg-toggle">
+            <button class="seg-btn" id="btn-cw" onclick="setOrbitDir('cw')">↻ CW</button>
+            <button class="seg-btn active" id="btn-ccw" onclick="setOrbitDir('ccw')">↺ CCW</button>
+          </div>
+          <div class="slider-row">
+            <label><span>Speed</span><span id="speed-label">1.0x</span></label>
+            <input type="range" id="orbit-speed" min="0.1" max="5" step="0.1" value="1" oninput="onSpeedChange(this.value)">
+          </div>
+          <button class="purple-btn" id="btn-anim" onclick="toggleAnimation()">▶ Animate</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="panel">
+      <div class="panel-label">Stats</div>
       <div class="stat-row">
         <span class="stat-label">center</span>
-        <span class="stat-value blue" id="pos">—</span>
+        <span class="stat-value blue" id="pos-display">—</span>
       </div>
-      <div class="stat-row">
-        <span class="stat-label">overlap</span>
-        <span class="stat-value accent" id="ov">—</span>
+      <div id="standard-stats">
+        <div class="stat-row"><span class="stat-label">overlap</span><span class="stat-value accent" id="ov">—</span></div>
+        <div class="stat-row"><span class="stat-label">path length</span><span class="stat-value" id="plen">—</span></div>
+        <div class="stat-row"><span class="stat-label">% covered</span><span class="stat-value warn" id="pct">—</span></div>
       </div>
-      <div class="stat-row">
-        <span class="stat-label">path length</span>
-        <span class="stat-value" id="plen">—</span>
+      <div id="orbital-stats" style="display:none">
+        <div class="stat-row"><span class="stat-label">orbit coverage</span><span class="stat-value purple" id="orb-cov">—</span></div>
+        <div class="stat-row"><span class="stat-label">weighted score</span><span class="stat-value accent" id="orb-score">—</span></div>
+        <div class="stat-row"><span class="stat-label">path length</span><span class="stat-value" id="orb-plen">—</span></div>
+        <div class="stat-row"><span class="stat-label">scout angle</span><span class="stat-value blue" id="orb-angle">—</span></div>
       </div>
-      <div class="stat-row">
-        <span class="stat-label">% covered</span>
-        <span class="stat-value warn" id="pct">—</span>
-      </div>
-      <div class="stat-row stat-extra">
-        <span class="stat-label">zones</span>
-        <span class="stat-value" id="zone-count">0</span>
-      </div>
-      <div class="stat-row stat-extra">
-        <span class="stat-label">best overlap</span>
-        <span class="stat-value warn" id="best-ov">—</span>
-      </div>
+      <div class="stat-row"><span class="stat-label">zones</span><span class="stat-value" id="zone-count">0</span></div>
+      <div class="stat-row"><span class="stat-label">must-hit</span><span class="stat-value warn" id="musthit-status">none</span></div>
     </div>
 
+    <!-- OPTIMIZE -->
     <div class="panel">
       <div class="panel-label">Optimize</div>
       <button class="primary" onclick="findBest()">▶ Find best position</button>
       <button onclick="resetPath()">Reset path</button>
     </div>
 
+    <!-- VISUALIZE -->
     <div class="panel">
       <div class="panel-label">Visualize</div>
-      <button id="btn-heatmap" onclick="toggleHeatmap()" style="border-color:rgba(74,240,176,0.35);color:var(--text2)">&#9635; Heatmap: Off</button>
-      <p class="hint">Green = 100% covered · Red = 0%.<br>Uses current radius. Updates live.</p>
+      <button id="btn-heatmap" onclick="toggleHeatmap()" style="border-color:rgba(74,240,176,0.35);color:var(--text2)">⬛ Heatmap: Off</button>
+      <p class="hint">Green=best valid · Red=worst. Banned zones shown dark. Must-hit constraint applied.</p>
     </div>
 
-    <div class="panel">
-      <div class="panel-label">Import / Export</div>
-      <button onclick="exportPath()">⎘ Copy path to clipboard</button>
-      <button onclick="importPath()">⎗ Paste path from clipboard</button>
-      <p class="hint" style="color:var(--text3);margin-bottom:3px">Coords centered at (0,0) on export</p>
-      <p class="hint" id="io-status" style="min-height:14px;transition:opacity 0.4s"></p>
-    </div>
-
+    <!-- PRESETS -->
     <div class="panel">
       <div class="panel-label">Presets</div>
-      <div style="display:flex;gap:4px;margin-bottom:8px">
-        <input type="text" id="preset-name" placeholder="preset name…" style="flex:1;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none;min-width:0">
-        <button onclick="savePreset()" style="width:auto;padding:5px 10px;margin-bottom:0;flex-shrink:0">Save</button>
+      <div style="display:flex;gap:4px;margin-bottom:7px">
+        <input type="text" class="text-input" id="preset-name" placeholder="preset name…" style="flex:1;min-width:0">
+        <button onclick="savePreset()" style="width:auto;padding:5px 8px;margin-bottom:0;flex-shrink:0">Save</button>
       </div>
-      <div id="preset-list" style="display:flex;flex-direction:column;gap:4px"></div>
-      <p class="hint" id="preset-status" style="margin-top:6px;min-height:14px;transition:opacity 0.4s"></p>
+      <div id="preset-list"></div>
+      <p class="hint" id="preset-status" style="margin-top:5px;min-height:13px;transition:opacity 0.4s"></p>
     </div>
 
-    <div class="panel detail-panel">
-      <div class="panel-label">Path nodes</div>
-      <div id="node-list" style="font-family:var(--mono);font-size:10px;color:var(--text2);line-height:1.8;max-height:160px;overflow-y:auto"></div>
+    <!-- IMPORT / EXPORT -->
+    <div class="panel">
+      <div class="panel-label">Import / Export</div>
+      <button onclick="exportPath()">⎘ Copy path</button>
+      <button onclick="importPath()">⎗ Paste path</button>
+      <p class="hint" style="color:var(--text3);margin-bottom:2px">Coords centered at (0,0) on export</p>
+      <p class="hint" id="io-status" style="min-height:13px;transition:opacity 0.4s"></p>
     </div>
+
   </div>
 </div>
-
 <footer>
   <span><b>drag</b> circle/nodes</span>
   <span><b>scroll</b> to zoom</span>
-  <span><b>right-click drag</b> or <b>middle-drag</b> or <b>space+drag</b> to pan</span>
+  <span><b>right-click drag</b> to pan</span>
   <span><b>zone mode</b> drag to draw exclusion zones</span>
+  <span><b>must-hit mode</b> click to place required coverage point</span>
 </footer>
 
 <script>
+// ─── Canvas / viewport ───────────────────────────────────────────────────────
 const canvas = document.getElementById('main');
 const ctx = canvas.getContext('2d');
-
-let W, H;
-let dpr = window.devicePixelRatio || 1;
-let GRID = 1;
-
-// Pan / zoom
+let W, H, dpr = window.devicePixelRatio || 1, GRID = 1;
 let panX = 0, panY = 0, zoom = 0.6;
 
-function toWorld(sx, sy) {
-  return { x: (sx - panX) / zoom, y: (sy - panY) / zoom };
-}
-function toScreen(wx, wy) {
-  return { x: wx * zoom + panX, y: wy * zoom + panY };
-}
-
-function snapGrid(x, y) {
-  return {
-    x: Math.round(x / GRID) * GRID,
-    y: Math.round(y / GRID) * GRID
-  };
-}
-
-function resize() {
-  const wrap = canvas.parentElement;
-  W = wrap.clientWidth;
-  H = wrap.clientHeight;
-  canvas.width = W * dpr;
-  canvas.height = H * dpr;
-  canvas.style.width = W + 'px';
-  canvas.style.height = H + 'px';
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  if (!resizeDone) { resizeDone = true; loadPreset('midnight road'); } else { draw(); }
-}
+function toWorld(sx, sy) { return { x: (sx - panX) / zoom, y: (sy - panY) / zoom }; }
+function toScreen(wx, wy) { return { x: wx * zoom + panX, y: wy * zoom + panY }; }
+function snapGrid(x, y) { return { x: Math.round(x/GRID)*GRID, y: Math.round(y/GRID)*GRID }; }
 
 let resizeDone = false;
-
+function resize() {
+  const wrap = canvas.parentElement;
+  W = wrap.clientWidth; H = wrap.clientHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (!resizeDone) { resizeDone = true; loadPreset('midnight road'); }
+  else { invalidateHeatmap(); draw(); }
+}
 window.addEventListener('resize', resize);
 
-// --- State ---
+// ─── State ───────────────────────────────────────────────────────────────────
 let pts = [];
-// pts and circle stored as direct world coords (small pixel values)
-let circle = {x: 30, y: 50};
+let circle = {x: 0, y: 0};
 let radius = 5;
+let anchorRadius = 14, scoutRadius = 6;
+let sensorMode = 'standard';
 let bestPos = null;
 let mode = 'move';
-let dragging = null;
-let dragStartWorld = null;
-let dragDelta = null;
+let dragging = null, dragStartWorld = null, dragDelta = null;
 let animFrame = null;
+let zones = [];
+let zoneDrag = null;
+let mustHitPoint = null; // {x, y} in world coords, or null
+
+// Orbital animation
+let orbitAngle = 0;
+let orbitDir = 'ccw';
+let orbitSpeed = 1.0;
+let orbitAnimating = false;
+let orbitAnimId = null;
+let lastOrbitTime = null;
+
 // Heatmap
 let heatmapOn = false;
 let heatmapDirty = true;
 let heatmapImageData = null;
+let heatmapJob = null;
+let heatmapMinPct = 0, heatmapMaxPct = 100;
 
-// Exclusion zones: array of {x1,y1,x2,y2} in world coords (axis-aligned rects)
-let zones = [];
-let zoneDrag = null;
-
+function anchorR() { return anchorRadius; }
+function scoutR() { return scoutRadius; }
+function orbitRadius() { return anchorRadius; }
+function wr() { return sensorMode === 'orbital' ? anchorR() : radius; }
 function worldArr() { return pts.map(p => ({x: p.x, y: p.y})); }
-function wcx() { return circle.x; }
-function wcy() { return circle.y; }
-
 function pxArr() { return pts.map(p => toScreen(p.x, p.y)); }
 function cx() { return toScreen(circle.x, circle.y).x; }
 function cy() { return toScreen(circle.x, circle.y).y; }
-function cr() { return radius * zoom; }
-function wr() { return radius; }
 
-// --- Geometry ---
+// ─── Must-hit helpers ─────────────────────────────────────────────────────────
+function posCoversPoint(ox, oy, r, mh) {
+  if (!mh) return true;
+  const dist = Math.hypot(ox - mh.x, oy - mh.y);
+  return dist <= r;
+}
+function posCoversPointOrbital(ox, oy, ar, sr, mh) {
+  if (!mh) return true;
+  // At least one scout position on the orbit must cover the point
+  const STEPS = 72;
+  for (let i = 0; i < STEPS; i++) {
+    const angle = (i / STEPS) * Math.PI * 2;
+    const sx = ox + Math.cos(angle) * ar;
+    const sy = oy + Math.sin(angle) * ar;
+    if (Math.hypot(sx - mh.x, sy - mh.y) <= sr) return true;
+  }
+  return false;
+}
+function clearMustHit() {
+  pushUndo();
+  mustHitPoint = null;
+  bestPos = null;
+  document.getElementById('musthit-status').textContent = 'none';
+  invalidateHeatmap(); draw();
+}
+
+// ─── Geometry ────────────────────────────────────────────────────────────────
 function segOverlap(p1, p2, ox, oy, r) {
-  const dx = p2.x - p1.x, dy = p2.y - p1.y;
+  const dx = p2.x-p1.x, dy = p2.y-p1.y;
   const len = Math.hypot(dx, dy);
   if (len < 0.5) return 0;
   const ux = dx/len, uy = dy/len;
-  const fx = p1.x - ox, fy = p1.y - oy;
+  const fx = p1.x-ox, fy = p1.y-oy;
   const b = 2*(fx*ux + fy*uy);
   const c2 = fx*fx + fy*fy - r*r;
   const disc = b*b - 4*c2;
   if (disc < 0) return 0;
   const sq = Math.sqrt(disc);
-  const t0 = Math.max(0, (-b - sq) / 2);
-  const t1 = Math.min(len, (-b + sq) / 2);
-  return Math.max(0, t1 - t0);
+  const t0 = Math.max(0, (-b-sq)/2);
+  const t1 = Math.min(len, (-b+sq)/2);
+  return Math.max(0, t1-t0);
 }
 
 function totalOverlap(ox, oy, r) {
   const ap = worldArr();
   let s = 0;
-  for (let i = 0; i < ap.length - 1; i++) s += segOverlap(ap[i], ap[i+1], ox, oy, r);
+  for (let i = 0; i < ap.length-1; i++) s += segOverlap(ap[i], ap[i+1], ox, oy, r);
   return s;
 }
 
 function pathLength() {
   const ap = worldArr();
   let l = 0;
-  for (let i = 0; i < ap.length - 1; i++) l += Math.hypot(ap[i+1].x-ap[i].x, ap[i+1].y-ap[i].y);
+  for (let i = 0; i < ap.length-1; i++) l += Math.hypot(ap[i+1].x-ap[i].x, ap[i+1].y-ap[i].y);
   return l;
 }
 
-// Intersecting chord endpoints for drawing
 function segChords(p1, p2, ox, oy, r) {
   const dx = p2.x-p1.x, dy = p2.y-p1.y;
-  const len = Math.hypot(dx,dy);
+  const len = Math.hypot(dx, dy);
   if (len < 0.5) return null;
   const ux = dx/len, uy = dy/len;
   const fx = p1.x-ox, fy = p1.y-oy;
@@ -536,201 +344,188 @@ function segChords(p1, p2, ox, oy, r) {
   const sq = Math.sqrt(disc);
   const t0 = Math.max(0,(-b-sq)/2), t1 = Math.min(len,(-b+sq)/2);
   if (t1 <= t0) return null;
-  return [
-    {x: p1.x+ux*t0, y: p1.y+uy*t0},
-    {x: p1.x+ux*t1, y: p1.y+uy*t1}
-  ];
+  return [{x:p1.x+ux*t0,y:p1.y+uy*t0},{x:p1.x+ux*t1,y:p1.y+uy*t1}];
 }
 
-// --- Helpers ---
-function centeredCoords() {
-  const ap = worldArr();
-  if (!ap.length) return [];
-  const xs = ap.map(p => p.x), ys = ap.map(p => p.y);
-  const cx0 = (Math.min(...xs) + Math.max(...xs)) / 2;
-  const cy0 = (Math.min(...ys) + Math.max(...ys)) / 2;
-  return ap.map(p => [Math.round(p.x - cx0), Math.round(p.y - cy0)]);
+// ─── Orbital scoring ─────────────────────────────────────────────────────────
+function orbitalScore(ox, oy) {
+  const ar = anchorR(), sr = scoutR();
+  if (pathLength() < 0.001) return 0;
+  const STEPS = 72;
+  let total = 0;
+  for (let i = 0; i < STEPS; i++) {
+    const angle = (i/STEPS)*Math.PI*2;
+    const sx = ox + Math.cos(angle)*ar;
+    const sy = oy + Math.sin(angle)*ar;
+    total += totalOverlap(sx, sy, sr);
+  }
+  return total / STEPS;
 }
 
-// --- Heatmap ---
-// Heatmap: two-pass async computation.
-// Pass 1 — collect raw overlap values for every cell.
-// Pass 2 — find min/max across all cells, then color-map relative to that range
-//          so the best cell is always bright green and the worst is always red.
-let heatmapJob = null;
+function orbitalScoreFull(ox, oy) {
+  const ar = anchorR(), sr = scoutR();
+  const pl = pathLength();
+  if (pl < 0.001) return {score:0, coverage:0};
+  const STEPS = 120;
+  let totalOv = 0, anglesWithOv = 0;
+  for (let i = 0; i < STEPS; i++) {
+    const angle = (i/STEPS)*Math.PI*2;
+    const sx = ox + Math.cos(angle)*ar;
+    const sy = oy + Math.sin(angle)*ar;
+    const ov = totalOverlap(sx, sy, sr);
+    if (ov > 0.001) anglesWithOv++;
+    totalOv += ov;
+  }
+  return { score: totalOv/STEPS, coverage: (anglesWithOv/STEPS)*100 };
+}
 
+// ─── Exclusion zones ─────────────────────────────────────────────────────────
+function circleInAnyZone(wx, wy) {
+  for (const z of zones) {
+    const x1=Math.min(z.x1,z.x2), x2=Math.max(z.x1,z.x2);
+    const y1=Math.min(z.y1,z.y2), y2=Math.max(z.y1,z.y2);
+    if (wx>=x1&&wx<=x2&&wy>=y1&&wy<=y2) return true;
+  }
+  return false;
+}
+function hitZone(wx, wy) {
+  for (let i=zones.length-1; i>=0; i--) {
+    const z=zones[i];
+    const x1=Math.min(z.x1,z.x2), x2=Math.max(z.x1,z.x2);
+    const y1=Math.min(z.y1,z.y2), y2=Math.max(z.y1,z.y2);
+    if (wx>=x1&&wx<=x2&&wy>=y1&&wy<=y2) return i;
+  }
+  return -1;
+}
+function clearZones() { pushUndo(); zones=[]; bestPos=null; draw(); }
+
+// ─── Heatmap ─────────────────────────────────────────────────────────────────
 function heatmapColor(t) {
-  // t = 0 (worst) → red … t = 1 (best) → pink
-  // Stops (t → [r,g,b]):
-  //   0.00 → red        [220, 30,  30 ]
-  //   0.25 → orange     [230, 120, 20 ]
-  //   0.50 → yellow     [210, 200, 20 ]
-  //   0.70 → green      [40,  200, 60 ]
-  //   0.85 → blue       [50,  120, 230]
-  //   1.00 → pink       [240, 80,  200]
   const stops = [
-    [0.00, 220, 30,  30 ],
-    [0.25, 230, 120, 20 ],
-    [0.50, 210, 200, 20 ],
-    [0.70, 40,  200, 60 ],
+    [0.00, 220, 30,  30],
+    [0.25, 230, 120, 20],
+    [0.50, 210, 200, 20],
+    [0.70, 40,  200, 60],
     [0.85, 50,  120, 230],
     [1.00, 240, 80,  200],
   ];
-  // Find surrounding stops and lerp
-  let lo = stops[0], hi = stops[stops.length - 1];
-  for (let i = 0; i < stops.length - 1; i++) {
-    if (t >= stops[i][0] && t <= stops[i+1][0]) { lo = stops[i]; hi = stops[i+1]; break; }
+  let lo = stops[0], hi = stops[stops.length-1];
+  for (let i=0; i<stops.length-1; i++) {
+    if (t>=stops[i][0]&&t<=stops[i+1][0]) { lo=stops[i]; hi=stops[i+1]; break; }
   }
-  const range = hi[0] - lo[0];
-  const f = range < 0.0001 ? 0 : (t - lo[0]) / range;
-  const rr = Math.round(lo[1] + (hi[1] - lo[1]) * f);
-  const gg = Math.round(lo[2] + (hi[2] - lo[2]) * f);
-  const bb = Math.round(lo[3] + (hi[3] - lo[3]) * f);
-  return [rr, gg, bb, 170];
+  const f = (hi[0]-lo[0]<0.0001) ? 0 : (t-lo[0])/(hi[0]-lo[0]);
+  return [Math.round(lo[1]+(hi[1]-lo[1])*f), Math.round(lo[2]+(hi[2]-lo[2])*f), Math.round(lo[3]+(hi[3]-lo[3])*f), 165];
 }
 
 function startHeatmapJob() {
-  if (heatmapJob) { heatmapJob.cancelled = true; }
-
-  const r  = wr();
-  const pl = pathLength();
+  if (heatmapJob) heatmapJob.cancelled = true;
+  const r = wr(), pl = pathLength();
   if (pl < 0.001) { heatmapImageData = null; heatmapDirty = false; return; }
+  const PW = Math.round(W*dpr), PH = Math.round(H*dpr);
+  const CELL = Math.max(4, Math.round(dpr*8));
+  const cols = Math.ceil(PW/CELL), rows = Math.ceil(PH/CELL);
+  const snapPanX=panX, snapPanY=panY, snapZoom=zoom;
+  function snapToWorld(sx, sy) { return {x:(sx-snapPanX)/snapZoom, y:(sy-snapPanY)/snapZoom}; }
+  const ovValues = new Float32Array(cols*rows);
+  const validMask = new Uint8Array(cols*rows); // 1 = valid placement
+  const job = {cancelled:false, row:0, cols, rows, CELL, PW, PH, r, ovValues, validMask};
+  heatmapJob = job; heatmapDirty = false;
+  const ROWS_PER = Math.max(1, Math.ceil(rows/30));
+  const snapMH = mustHitPoint ? {...mustHitPoint} : null;
+  const snapZones = zones.map(z=>({...z}));
+  const snapSensorMode = sensorMode;
+  const snapAR = anchorRadius, snapSR = scoutRadius;
 
-  const PW   = Math.round(W * dpr);
-  const PH   = Math.round(H * dpr);
-  const CELL = Math.max(4, Math.round(dpr * 8));
-  const cols = Math.ceil(PW / CELL);
-  const rows = Math.ceil(PH / CELL);
-
-  // Snapshot geometry at job-start so pan/zoom mid-flight doesn't corrupt coords
-  const snapPanX = panX, snapPanY = panY, snapZoom = zoom;
-  function snapToWorld(sx, sy) {
-    return { x: (sx - snapPanX) / snapZoom, y: (sy - snapPanY) / snapZoom };
+  function checkMustHit(wx, wy) {
+    if (!snapMH) return true;
+    if (snapSensorMode === 'orbital') {
+      const STEPS = 36;
+      for (let i = 0; i < STEPS; i++) {
+        const angle = (i/STEPS)*Math.PI*2;
+        const sx = wx + Math.cos(angle)*snapAR;
+        const sy = wy + Math.sin(angle)*snapAR;
+        if (Math.hypot(sx - snapMH.x, sy - snapMH.y) <= snapSR) return true;
+      }
+      return false;
+    }
+    return Math.hypot(wx - snapMH.x, wy - snapMH.y) <= r;
   }
 
-  // Pass 1: raw overlap values per cell
-  const ovValues = new Float32Array(cols * rows);
-  const job = { cancelled: false, pass: 1, row: 0, cols, rows, CELL, PW, PH, r, ovValues };
-  heatmapJob = job;
-  heatmapDirty = false;
-
-  const ROWS_PER_FRAME = Math.max(1, Math.ceil(rows / 30));
+  function checkZone(wx, wy) {
+    for (const z of snapZones) {
+      const x1=Math.min(z.x1,z.x2), x2=Math.max(z.x1,z.x2);
+      const y1=Math.min(z.y1,z.y2), y2=Math.max(z.y1,z.y2);
+      if (wx>=x1&&wx<=x2&&wy>=y1&&wy<=y2) return true;
+    }
+    return false;
+  }
 
   function tickPass1() {
     if (job.cancelled) return;
-    const endRow = Math.min(job.row + ROWS_PER_FRAME, rows);
-    for (let row = job.row; row < endRow; row++) {
-      for (let col = 0; col < cols; col++) {
-        const sx = (col * CELL + CELL * 0.5) / dpr;
-        const sy = (row * CELL + CELL * 0.5) / dpr;
-        const { x: wx, y: wy } = snapToWorld(sx, sy);
-        ovValues[row * cols + col] = totalOverlap(wx, wy, r);
+    const endRow = Math.min(job.row+ROWS_PER, rows);
+    for (let row=job.row; row<endRow; row++) {
+      for (let col=0; col<cols; col++) {
+        const sx=(col*CELL+CELL*0.5)/dpr, sy=(row*CELL+CELL*0.5)/dpr;
+        const {x:wx,y:wy} = snapToWorld(sx, sy);
+        const inBan = checkZone(wx, wy);
+        const mhOk = checkMustHit(wx, wy);
+        const isValid = !inBan && mhOk;
+        validMask[row*cols+col] = isValid ? 1 : 0;
+        if (isValid) {
+          ovValues[row*cols+col] = snapSensorMode==='orbital' ? orbitalScore(wx, wy) : totalOverlap(wx, wy, r);
+        } else {
+          ovValues[row*cols+col] = -1; // sentinel for invalid
+        }
       }
     }
     job.row = endRow;
-    if (job.row < rows) { requestAnimationFrame(tickPass1); }
-    else                { requestAnimationFrame(tickPass2); }
+    if (job.row < rows) requestAnimationFrame(tickPass1);
+    else requestAnimationFrame(tickPass2);
   }
 
   function tickPass2() {
     if (job.cancelled) return;
-    // Find actual min/max so the colour scale spans the real data range
-    let minOv = Infinity, maxOv = -Infinity;
-    for (let i = 0; i < ovValues.length; i++) {
-      if (ovValues[i] < minOv) minOv = ovValues[i];
-      if (ovValues[i] > maxOv) maxOv = ovValues[i];
+    // Find min/max only among valid cells
+    let minOv=Infinity, maxOv=-Infinity;
+    for (let i=0; i<ovValues.length; i++) {
+      if (validMask[i]) {
+        if (ovValues[i]<minOv) minOv=ovValues[i];
+        if (ovValues[i]>maxOv) maxOv=ovValues[i];
+      }
     }
-    const range = maxOv - minOv || 1;
-
+    if (minOv === Infinity) { minOv = 0; maxOv = 1; } // all cells invalid
+    const range = maxOv-minOv || 1;
     const imgData = new ImageData(PW, PH);
-    const data    = imgData.data;
-
-    for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < cols; col++) {
-        const t = (ovValues[row * cols + col] - minOv) / range; // 0=worst, 1=best
-        const [rr, gg, bb, alpha] = heatmapColor(t);
-        const x0 = col * CELL, y0 = row * CELL;
-        const x1 = Math.min(x0 + CELL, PW), y1 = Math.min(y0 + CELL, PH);
-        for (let py = y0; py < y1; py++) {
-          const base = py * PW;
-          for (let px = x0; px < x1; px++) {
-            const idx = (base + px) * 4;
-            data[idx]   = rr; data[idx+1] = gg;
-            data[idx+2] = bb; data[idx+3] = alpha;
+    const data = imgData.data;
+    for (let row=0; row<rows; row++) {
+      for (let col=0; col<cols; col++) {
+        const idx2 = row*cols+col;
+        const x0=col*CELL, y0=row*CELL, x1=Math.min(x0+CELL,PW), y1=Math.min(y0+CELL,PH);
+        let rr, gg, bb, alpha;
+        if (!validMask[idx2]) {
+          // Banned / must-hit fail: dark overlay
+          rr = 20; gg = 20; bb = 25; alpha = 120;
+        } else {
+          const t = (ovValues[idx2]-minOv)/range;
+          [rr,gg,bb,alpha] = heatmapColor(t);
+        }
+        for (let py=y0; py<y1; py++) {
+          const base = py*PW;
+          for (let px=x0; px<x1; px++) {
+            const idx=(base+px)*4;
+            data[idx]=rr; data[idx+1]=gg; data[idx+2]=bb; data[idx+3]=alpha;
           }
         }
       }
     }
-
-    // Store min/max so the legend can show real percentages
-    job.minPct = minOv / pl * 100;
-    job.maxPct = maxOv / pl * 100;
+    const pl2 = pathLength();
+    heatmapMinPct = pl2>0 ? minOv/pl2*100 : 0;
+    heatmapMaxPct = pl2>0 ? maxOv/pl2*100 : 0;
     heatmapImageData = imgData;
-    heatmapMinPct = job.minPct;
-    heatmapMaxPct = job.maxPct;
     heatmapJob = null;
     draw();
   }
-
   requestAnimationFrame(tickPass1);
-}
-
-let heatmapMinPct = 0, heatmapMaxPct = 100;
-
-function renderHeatmap() {
-  if (heatmapDirty) {
-    heatmapDirty = false;
-    startHeatmapJob();
-  }
-
-  if (!heatmapImageData) {
-    // Show a "computing…" label while pass 1 runs
-    ctx.font = '400 10px "IBM Plex Mono", monospace';
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.textAlign = 'left';
-    ctx.fillText('heatmap computing…', 14, H - 14);
-    return;
-  }
-
-  // Blit (putImageData bypasses the dpr transform)
-  ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.putImageData(heatmapImageData, 0, 0);
-  ctx.restore();
-
-  // Legend bar with actual min/max labels
-  const lw = 90, lh = 9, lx = 14, ly = H - 26;
-  for (let i = 0; i < lw; i++) {
-    const [rr, gg, bb] = heatmapColor(i / lw);
-    ctx.fillStyle = `rgb(${rr},${gg},${bb})`;
-    ctx.fillRect(lx + i, ly, 1, lh);
-  }
-  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(lx, ly, lw, lh);
-  ctx.font = '400 9px "IBM Plex Mono", monospace';
-  ctx.fillStyle = 'rgba(255,255,255,0.45)';
-  ctx.textAlign = 'left';
-  ctx.fillText(heatmapMinPct.toFixed(1) + '%', lx, ly + lh + 10);
-  ctx.textAlign = 'right';
-  ctx.fillText(heatmapMaxPct.toFixed(1) + '%', lx + lw, ly + lh + 10);
-  ctx.textAlign = 'left';
-}
-
-function toggleHeatmap() {
-  heatmapOn = !heatmapOn;
-  heatmapDirty = true;
-  const btn = document.getElementById('btn-heatmap');
-  if (heatmapOn) {
-    btn.textContent = '⬛ Heatmap: On';
-    btn.style.borderColor = 'var(--accent)';
-    btn.style.color = 'var(--accent)';
-  } else {
-    btn.textContent = '⬛ Heatmap: Off';
-    btn.style.borderColor = 'rgba(74,240,176,0.35)';
-    btn.style.color = 'var(--text2)';
-  }
-  draw();
 }
 
 function invalidateHeatmap() {
@@ -739,996 +534,958 @@ function invalidateHeatmap() {
   if (heatmapJob) { heatmapJob.cancelled = true; heatmapJob = null; }
 }
 
-// --- Optimize ---
-function findBest() {
-  const r = wr();
-  let best = -1, bx = wcx(), by = wcy();
-
-  const ap = worldArr();
-
-  // Build segment list
-  let cumLen = 0;
-  const segs = [];
-  for (let i = 0; i < ap.length - 1; i++) {
-    const l = Math.hypot(ap[i+1].x - ap[i].x, ap[i+1].y - ap[i].y);
-    segs.push({ p1: ap[i], p2: ap[i+1], len: l });
-    cumLen += l;
+function renderHeatmap() {
+  if (heatmapDirty) { heatmapDirty=false; startHeatmapJob(); }
+  if (!heatmapImageData) {
+    ctx.font='400 10px "IBM Plex Mono",monospace'; ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.textAlign='left';
+    ctx.fillText('heatmap computing…', 14, H-14); return;
   }
-
-  function tryPt(ox, oy) {
-    if (circleInAnyZone(ox, oy)) return; // skip excluded positions
-    const ov = totalOverlap(ox, oy, r);
-    if (ov > best) { best = ov; bx = ox; by = oy; }
-  }
-
-  // Walk arc-length t along path, returning {x,y}
-  function pathPt(t) {
-    let rem = t;
-    for (const seg of segs) {
-      if (rem <= seg.len + 0.001) {
-        const frac = Math.min(rem / Math.max(seg.len, 0.001), 1);
-        return { x: seg.p1.x + (seg.p2.x - seg.p1.x) * frac,
-                 y: seg.p1.y + (seg.p2.y - seg.p1.y) * frac,
-                 seg };
-      }
-      rem -= seg.len;
-    }
-    return { x: ap[ap.length-1].x, y: ap[ap.length-1].y, seg: segs[segs.length-1] };
-  }
-
-  // 1. Dense on-path samples (~every 2px)
-  const PATH_STEPS = Math.max(300, Math.ceil(cumLen / 2));
-  for (let s = 0; s <= PATH_STEPS; s++) {
-    const { x, y } = pathPt((s / PATH_STEPS) * cumLen);
-    tryPt(x, y);
-  }
-
-  // 2. Perpendicular sweeps from every point along path (both sides, fine increments)
-  const PERP_STEPS = Math.max(400, Math.ceil(cumLen / 1.5));
-  for (let s = 0; s <= PERP_STEPS; s++) {
-    const { x, y, seg } = pathPt((s / PERP_STEPS) * cumLen);
-    const dx = seg.p2.x - seg.p1.x, dy = seg.p2.y - seg.p1.y;
-    const len = Math.hypot(dx, dy) || 1;
-    const nx = -dy / len, ny = dx / len;
-    for (let d = r * 0.04; d <= r * 1.02; d += r * 0.04) {
-      tryPt(x + nx * d, y + ny * d);
-      tryPt(x - nx * d, y - ny * d);
-    }
-  }
-
-  // 3. All-angle radial fan from every path node (corner sweet-spots)
-  for (const pt of ap) {
-    for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 32) {
-      for (let dist = r * 0.05; dist <= r * 1.05; dist += r * 0.05) {
-        tryPt(pt.x + Math.cos(angle) * dist, pt.y + Math.sin(angle) * dist);
-      }
-    }
-  }
-
-  // 4. Gradient-ascent refinement from best candidate
-  let stepSize = r * 0.5;
-  while (stepSize > 0.25) {
-    let moved = false;
-    for (const [ddx, ddy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]]) {
-      const nx = bx + ddx * stepSize, ny = by + ddy * stepSize;
-      if (circleInAnyZone(nx, ny)) continue;
-      const ov = totalOverlap(nx, ny, r);
-      if (ov > best) { best = ov; bx = nx; by = ny; moved = true; break; }
-    }
-    if (!moved) stepSize *= 0.5;
-  }
-
-  bestPos = {x: bx, y: by, ov: best};
-
-  // Animate to best (world coords)
-  const startX = wcx(), startY = wcy();
-  let start = null;
-  if (animFrame) cancelAnimationFrame(animFrame);
-  function step(ts) {
-    if (!start) start = ts;
-    const f = Math.min((ts-start)/600, 1);
-    const ease = f < 0.5 ? 2*f*f : 1-Math.pow(-2*f+2,2)/2;
-    circle.x = startX + (bx-startX)*ease;
-    circle.y = startY + (by-startY)*ease;
-    draw();
-    if (f < 1) animFrame = requestAnimationFrame(step);
-  }
-  animFrame = requestAnimationFrame(step);
+  ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.putImageData(heatmapImageData,0,0); ctx.restore();
+  const lw=90, lh=9, lx=14, ly=H-26;
+  for (let i=0; i<lw; i++) { const [rr,gg,bb]=heatmapColor(i/lw); ctx.fillStyle=`rgb(${rr},${gg},${bb})`; ctx.fillRect(lx+i,ly,1,lh); }
+  ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=1; ctx.strokeRect(lx,ly,lw,lh);
+  ctx.font='400 9px "IBM Plex Mono",monospace'; ctx.fillStyle='rgba(255,255,255,0.45)';
+  ctx.textAlign='left'; ctx.fillText(heatmapMinPct.toFixed(1)+'%', lx, ly+lh+10);
+  ctx.textAlign='right'; ctx.fillText(heatmapMaxPct.toFixed(1)+'%', lx+lw, ly+lh+10); ctx.textAlign='left';
 }
 
-function clearBest() { pushUndo(); bestPos = null; draw(); }
+function toggleHeatmap() {
+  heatmapOn = !heatmapOn; heatmapDirty = true;
+  const btn = document.getElementById('btn-heatmap');
+  if (heatmapOn) { btn.textContent='⬛ Heatmap: On'; btn.style.borderColor='var(--accent)'; btn.style.color='var(--accent)'; }
+  else { btn.textContent='⬛ Heatmap: Off'; btn.style.borderColor='rgba(74,240,176,0.35)'; btn.style.color='var(--text2)'; }
+  draw();
+}
 
+// ─── Draw helpers ─────────────────────────────────────────────────────────────
+function roundRect(c2, x, y, w, h, rad) {
+  rad=Math.min(rad,w/2,h/2);
+  c2.beginPath();
+  c2.moveTo(x+rad,y); c2.lineTo(x+w-rad,y); c2.arcTo(x+w,y,x+w,y+rad,rad);
+  c2.lineTo(x+w,y+h-rad); c2.arcTo(x+w,y+h,x+w-rad,y+h,rad);
+  c2.lineTo(x+rad,y+h); c2.arcTo(x,y+h,x,y+h-rad,rad);
+  c2.lineTo(x,y+rad); c2.arcTo(x,y,x+rad,y,rad); c2.closePath();
+}
+
+// ─── Draw must-hit point ──────────────────────────────────────────────────────
+function drawMustHitPoint() {
+  if (!mustHitPoint) return;
+  const ms = toScreen(mustHitPoint.x, mustHitPoint.y);
+  const r = wr();
+  const rPx = r * zoom;
+
+  // Soft circle showing must-hit range (same radius as sensor)
+  ctx.strokeStyle = 'rgba(255,200,60,0.25)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.arc(ms.x, ms.y, rPx, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Crosshair
+  const arm = 10;
+  ctx.strokeStyle = '#ffc83c';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(ms.x - arm, ms.y); ctx.lineTo(ms.x + arm, ms.y);
+  ctx.moveTo(ms.x, ms.y - arm); ctx.lineTo(ms.x, ms.y + arm);
+  ctx.stroke();
+
+  // Center dot
+  ctx.fillStyle = '#ffc83c';
+  ctx.beginPath();
+  ctx.arc(ms.x, ms.y, 3.5, 0, Math.PI*2);
+  ctx.fill();
+
+  // Label
+  ctx.font = '400 10px "IBM Plex Mono",monospace';
+  ctx.fillStyle = '#ffc83c';
+  ctx.textAlign = 'left';
+  ctx.fillText('must hit', ms.x + 10, ms.y - 6);
+
+  // Indicate whether current circle covers this point
+  const covers = sensorMode === 'orbital'
+    ? posCoversPointOrbital(circle.x, circle.y, anchorRadius, scoutRadius, mustHitPoint)
+    : posCoversPoint(circle.x, circle.y, radius, mustHitPoint);
+  const coverLabel = covers ? '✓ covered' : '✗ missed';
+  ctx.fillStyle = covers ? '#4af0b0' : '#f04a6a';
+  ctx.fillText(coverLabel, ms.x + 10, ms.y + 6);
+  ctx.textAlign = 'left';
+}
+
+// ─── Main draw ───────────────────────────────────────────────────────────────
+function draw() {
+  ctx.clearRect(0,0,W,H);
+  const ap = pxArr(), wa = worldArr();
+  const ocx = cx(), ocy = cy();
+  const wox = circle.x, woy = circle.y;
+
+  if (heatmapOn) renderHeatmap();
+
+  // Grid
+  const gs = GRID*zoom;
+  const ox2 = ((panX%gs)+gs)%gs, oy2 = ((panY%gs)+gs)%gs;
+  ctx.strokeStyle='rgba(255,255,255,0.03)'; ctx.lineWidth=1;
+  for (let x=ox2; x<W; x+=gs) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y=oy2; y<H; y+=gs) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  // Zones
+  for (const z of zones) {
+    const s1=toScreen(Math.min(z.x1,z.x2),Math.min(z.y1,z.y2));
+    const s2=toScreen(Math.max(z.x1,z.x2),Math.max(z.y1,z.y2));
+    ctx.fillStyle='rgba(240,74,106,0.12)'; ctx.fillRect(s1.x,s1.y,s2.x-s1.x,s2.y-s1.y);
+    ctx.strokeStyle='rgba(240,74,106,0.5)'; ctx.lineWidth=1; ctx.setLineDash([4,3]);
+    ctx.strokeRect(s1.x,s1.y,s2.x-s1.x,s2.y-s1.y); ctx.setLineDash([]);
+  }
+  if (zoneDrag) {
+    const s1=toScreen(Math.min(zoneDrag.wx,zoneDrag.cx),Math.min(zoneDrag.wy,zoneDrag.cy));
+    const s2=toScreen(Math.max(zoneDrag.wx,zoneDrag.cx),Math.max(zoneDrag.wy,zoneDrag.cy));
+    ctx.fillStyle='rgba(240,74,106,0.18)'; ctx.fillRect(s1.x,s1.y,s2.x-s1.x,s2.y-s1.y);
+    ctx.strokeStyle='rgba(240,74,106,0.8)'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+    ctx.strokeRect(s1.x,s1.y,s2.x-s1.x,s2.y-s1.y); ctx.setLineDash([]);
+  }
+
+  document.getElementById('zone-count').textContent = zones.length;
+
+  // Must-hit point (draw under sensor so it's visible)
+  drawMustHitPoint();
+
+  if (sensorMode==='orbital') drawOrbital(ap, wa, ocx, ocy, wox, woy);
+  else drawStandard(ap, wa, ocx, ocy, wox, woy);
+}
+
+function drawPolyline(ap, wa) {
+  if (ap.length < 2) return;
+  ctx.strokeStyle='rgba(255,255,255,0.35)'; ctx.lineWidth=2; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(ap[0].x,ap[0].y);
+  for (let i=1; i<ap.length; i++) ctx.lineTo(ap[i].x,ap[i].y);
+  ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,0.5)';
+  ctx.beginPath(); ctx.arc(ap[0].x,ap[0].y,4,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ap[ap.length-1].x,ap[ap.length-1].y,4,0,Math.PI*2); ctx.fill();
+  for (let i=1; i<ap.length-1; i++) {
+    ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.fillStyle='#0d0f12'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(ap[i].x,ap[i].y,5,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  }
+  if (mode==='move' && wa) {
+    ctx.font='400 10px "IBM Plex Mono",monospace'; ctx.textAlign='center';
+    for (let i=0; i<wa.length-1; i++) {
+      const segLen = Math.hypot(wa[i+1].x-wa[i].x,wa[i+1].y-wa[i].y);
+      const label = segLen.toFixed(1);
+      const mx=(ap[i].x+ap[i+1].x)/2, my=(ap[i].y+ap[i+1].y)/2;
+      const sdx=ap[i+1].x-ap[i].x, sdy=ap[i+1].y-ap[i].y;
+      const slen=Math.hypot(sdx,sdy)||1;
+      const nx=-sdy/slen, ny=sdx/slen;
+      const screenLen=slen, off=13;
+      if (screenLen<30) continue;
+      const lx=mx+nx*off, ly=my+ny*off, tw=ctx.measureText(label).width;
+      ctx.globalAlpha=Math.min(1,(screenLen-30)/40);
+      ctx.fillStyle='rgba(13,15,18,0.78)'; roundRect(ctx,lx-tw/2-4,ly-8,tw+8,13,3); ctx.fill();
+      ctx.fillStyle='#7a8099'; ctx.fillText(label,lx,ly+2);
+    }
+    ctx.globalAlpha=1; ctx.textAlign='left';
+  }
+  if (mode==='add') {
+    for (const ep of [ap[0],ap[ap.length-1]]) {
+      ctx.strokeStyle='#4af0b0'; ctx.lineWidth=1.5; ctx.setLineDash([3,2]);
+      ctx.beginPath(); ctx.arc(ep.x,ep.y,8,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+}
+
+function drawStandard(ap, wa, ocx, ocy, wox, woy) {
+  const r = radius, rPx = r*zoom;
+  const ov = totalOverlap(wox, woy, r);
+  const inZone = circleInAnyZone(wox, woy);
+  const coversHit = posCoversPoint(wox, woy, r, mustHitPoint);
+  const isInvalid = inZone || !coversHit;
+
+  // Highlight overlap
+  ctx.lineCap='round';
+  for (let i=0; i<wa.length-1; i++) {
+    const chord = segChords(wa[i],wa[i+1],wox,woy,r);
+    if (!chord) continue;
+    const s0=toScreen(chord[0].x,chord[0].y), s1=toScreen(chord[1].x,chord[1].y);
+    ctx.strokeStyle='#4af0b0'; ctx.lineWidth=5; ctx.globalAlpha=0.9;
+    ctx.beginPath(); ctx.moveTo(s0.x,s0.y); ctx.lineTo(s1.x,s1.y); ctx.stroke();
+    ctx.globalAlpha=1;
+  }
+
+  drawPolyline(ap, wa);
+
+  // Best position
+  if (bestPos) {
+    const bs=toScreen(bestPos.x,bestPos.y);
+    ctx.strokeStyle='#f0b04a'; ctx.lineWidth=1; ctx.setLineDash([5,4]);
+    ctx.beginPath(); ctx.arc(bs.x,bs.y,rPx,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='#f0b04a'; ctx.globalAlpha=0.6;
+    ctx.beginPath(); ctx.arc(bs.x,bs.y,3,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
+    ctx.font='500 10px IBM Plex Mono,monospace'; ctx.fillStyle='#f0b04a';
+    ctx.fillText('best', bs.x+rPx+8, bs.y+4);
+  }
+
+  // Circle
+  ctx.beginPath(); ctx.arc(ocx,ocy,rPx,0,Math.PI*2);
+  const grad = ctx.createRadialGradient(ocx,ocy,0,ocx,ocy,rPx);
+  if (inZone) { grad.addColorStop(0,'rgba(240,74,106,0.18)'); grad.addColorStop(1,'rgba(240,74,106,0.07)'); }
+  else if (!coversHit) { grad.addColorStop(0,'rgba(255,200,60,0.18)'); grad.addColorStop(1,'rgba(255,200,60,0.06)'); }
+  else { grad.addColorStop(0,'rgba(74,180,240,0.10)'); grad.addColorStop(1,'rgba(74,180,240,0.04)'); }
+  ctx.fillStyle=grad; ctx.fill();
+  const circleColor = inZone ? '#f04a6a' : (!coversHit ? '#ffc83c' : '#4ab4f0');
+  ctx.strokeStyle=circleColor; ctx.lineWidth=isInvalid?2:1.5; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(ocx,ocy,rPx,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle=circleColor;
+  ctx.beginPath(); ctx.arc(ocx,ocy,3,0,Math.PI*2); ctx.fill();
+
+  // Radius handle
+  const rhx=ocx+rPx, rhy=ocy;
+  const isHandleDrag = dragging&&dragging.type==='radius';
+  ctx.fillStyle=isHandleDrag?'#f0b04a':'#4ab4f0'; ctx.strokeStyle='#0d0f12'; ctx.lineWidth=1.5;
+  const hs=isHandleDrag?6:5;
+  ctx.beginPath(); ctx.rect(rhx-hs/2,rhy-hs/2,hs,hs); ctx.fill(); ctx.stroke();
+  if (isHandleDrag) {
+    ctx.strokeStyle='rgba(240,176,74,0.5)'; ctx.lineWidth=1; ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(ocx,ocy); ctx.lineTo(rhx,rhy); ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  // Label — WHITE text
+  const lx=ocx+rPx+12, ly=ocy-6;
+  const pl=pathLength(), pct=pl>0?(ov/pl*100):0;
+  ctx.font='400 11px IBM Plex Mono,monospace'; ctx.fillStyle='#ffffff';
+  ctx.fillText('range='+radius.toFixed(1), lx, ly);
+  ctx.fillStyle='#ffffff'; ctx.fillText('coverage='+ov.toFixed(1)+' units', lx, ly+14);
+  ctx.fillStyle='#ffffff'; ctx.fillText(pct.toFixed(1)+'% covered', lx, ly+28);
+
+  // Stats
+  document.getElementById('pos-display').textContent = Math.round(wox)+', '+Math.round(woy);
+  document.getElementById('ov').textContent = ov.toFixed(1)+' units';
+  document.getElementById('plen').textContent = Math.round(pl)+' units';
+  document.getElementById('pct').textContent = pl>0?(ov/pl*100).toFixed(1)+'%':'—';
+  document.getElementById('undo-count').textContent = undoStack.length?`(${undoStack.length})`:'';
+  document.getElementById('musthit-status').textContent = mustHitPoint
+    ? `(${Math.round(mustHitPoint.x)}, ${Math.round(mustHitPoint.y)})`
+    : 'none';
+}
+
+function drawOrbital(ap, wa, ocx, ocy, wox, woy) {
+  const ar=anchorR(), sr=scoutR();
+  const orbitRpx=ar*zoom, arPx=ar*zoom, srPx=sr*zoom;
+  const res = orbitalScoreFull(wox, woy);
+  const scoutWX = wox+Math.cos(orbitAngle)*ar;
+  const scoutWY = woy+Math.sin(orbitAngle)*ar;
+  const coversHit = posCoversPointOrbital(wox, woy, ar, sr, mustHitPoint);
+
+  // Highlight overlap
+  ctx.lineCap='round';
+  for (let i=0; i<wa.length-1; i++) {
+    const chord = segChords(wa[i],wa[i+1],scoutWX,scoutWY,sr);
+    if (!chord) continue;
+    const s0=toScreen(chord[0].x,chord[0].y), s1=toScreen(chord[1].x,chord[1].y);
+    ctx.strokeStyle='#c084fc'; ctx.lineWidth=5; ctx.globalAlpha=0.9;
+    ctx.beginPath(); ctx.moveTo(s0.x,s0.y); ctx.lineTo(s1.x,s1.y); ctx.stroke();
+    ctx.globalAlpha=1;
+  }
+
+  drawPolyline(ap, wa);
+
+  // Best position
+  if (bestPos) {
+    const bs=toScreen(bestPos.x,bestPos.y), bestOrbitPx=anchorR()*zoom;
+    ctx.strokeStyle='#f0b04a'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.arc(bs.x,bs.y,arPx,0,Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(bs.x,bs.y,bestOrbitPx,0,Math.PI*2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#f0b04a'; ctx.globalAlpha=0.6;
+    ctx.beginPath(); ctx.arc(bs.x,bs.y,3,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
+    ctx.font='500 10px IBM Plex Mono,monospace'; ctx.fillStyle='#f0b04a';
+    ctx.fillText('best', bs.x+bestOrbitPx+8, bs.y+4);
+  }
+
+  // Orbit ring (ghost)
+  ctx.strokeStyle='rgba(192,132,252,0.2)'; ctx.lineWidth=1.5; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(ocx,ocy,orbitRpx,0,Math.PI*2); ctx.stroke();
+  ctx.strokeStyle='rgba(192,132,252,0.07)'; ctx.lineWidth=srPx*2;
+  ctx.beginPath(); ctx.arc(ocx,ocy,orbitRpx,0,Math.PI*2); ctx.stroke();
+
+  const scoutSX=toScreen(scoutWX,scoutWY);
+  // Arm
+  ctx.strokeStyle='rgba(192,132,252,0.35)'; ctx.lineWidth=1; ctx.setLineDash([3,2]);
+  ctx.beginPath(); ctx.moveTo(ocx,ocy); ctx.lineTo(scoutSX.x,scoutSX.y); ctx.stroke(); ctx.setLineDash([]);
+
+  // Anchor
+  const aGrad=ctx.createRadialGradient(ocx,ocy,0,ocx,ocy,arPx);
+  aGrad.addColorStop(0,'rgba(192,132,252,0.12)'); aGrad.addColorStop(1,'rgba(192,132,252,0.04)');
+  ctx.fillStyle=aGrad; ctx.beginPath(); ctx.arc(ocx,ocy,arPx,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle=coversHit?'#c084fc':'#ffc83c'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(ocx,ocy,arPx,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle=coversHit?'#c084fc':'#ffc83c';
+  ctx.beginPath(); ctx.arc(ocx,ocy,3,0,Math.PI*2); ctx.fill();
+
+  // Scout
+  const scoutOv=totalOverlap(scoutWX,scoutWY,sr);
+  const scoutHasOv=scoutOv>0.001;
+  const sGrad=ctx.createRadialGradient(scoutSX.x,scoutSX.y,0,scoutSX.x,scoutSX.y,srPx);
+  if (scoutHasOv) { sGrad.addColorStop(0,'rgba(192,132,252,0.25)'); sGrad.addColorStop(1,'rgba(192,132,252,0.08)'); }
+  else { sGrad.addColorStop(0,'rgba(192,132,252,0.08)'); sGrad.addColorStop(1,'rgba(192,132,252,0.02)'); }
+  ctx.fillStyle=sGrad; ctx.beginPath(); ctx.arc(scoutSX.x,scoutSX.y,srPx,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle=scoutHasOv?'#c084fc':'rgba(192,132,252,0.4)'; ctx.lineWidth=scoutHasOv?2:1;
+  ctx.beginPath(); ctx.arc(scoutSX.x,scoutSX.y,srPx,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle='#c084fc'; ctx.beginPath(); ctx.arc(scoutSX.x,scoutSX.y,2.5,0,Math.PI*2); ctx.fill();
+
+  // Label — WHITE text for sensor info
+  const lx=ocx+orbitRpx+12, ly=ocy-6;
+  ctx.font='400 11px IBM Plex Mono,monospace';
+  ctx.fillStyle='#ffffff'; ctx.fillText('anchor R='+anchorRadius.toFixed(1), lx, ly);
+  ctx.fillStyle='#ffffff'; ctx.fillText('scout R='+scoutRadius.toFixed(1), lx, ly+14);
+  ctx.fillStyle='#ffffff'; ctx.fillText('score='+res.score.toFixed(2), lx, ly+28);
+  ctx.fillStyle='#ffffff'; ctx.fillText(res.coverage.toFixed(1)+'% arc sees track', lx, ly+42);
+
+  // Stats
+  const angleDeg = ((orbitAngle*180/Math.PI)%360+360)%360;
+  document.getElementById('pos-display').textContent = Math.round(wox)+', '+Math.round(woy);
+  document.getElementById('orb-cov').textContent = res.coverage.toFixed(1)+'%';
+  document.getElementById('orb-score').textContent = res.score.toFixed(3);
+  document.getElementById('orb-plen').textContent = Math.round(pathLength())+' units';
+  document.getElementById('orb-angle').textContent = angleDeg.toFixed(0)+'deg';
+  document.getElementById('undo-count').textContent = undoStack.length?`(${undoStack.length})`:'';
+  document.getElementById('musthit-status').textContent = mustHitPoint
+    ? `(${Math.round(mustHitPoint.x)}, ${Math.round(mustHitPoint.y)})`
+    : 'none';
+}
+
+// ─── Orbital animation ───────────────────────────────────────────────────────
+function startOrbitAnim() {
+  if (orbitAnimating) return;
+  orbitAnimating = true; lastOrbitTime = null;
+  document.getElementById('btn-anim').textContent='Stop';
+  document.getElementById('btn-anim').classList.add('active');
+  function tick(ts) {
+    if (!orbitAnimating) return;
+    if (lastOrbitTime===null) lastOrbitTime=ts;
+    const dt=(ts-lastOrbitTime)/1000; lastOrbitTime=ts;
+    orbitAngle += (orbitDir==='cw'?1:-1)*orbitSpeed*0.8*dt*Math.PI;
+    draw();
+    orbitAnimId=requestAnimationFrame(tick);
+  }
+  orbitAnimId=requestAnimationFrame(tick);
+}
+function stopOrbitAnim() {
+  orbitAnimating=false;
+  if (orbitAnimId) cancelAnimationFrame(orbitAnimId);
+  document.getElementById('btn-anim').textContent='▶ Animate';
+  document.getElementById('btn-anim').classList.remove('active');
+}
+function toggleAnimation() { if (orbitAnimating) stopOrbitAnim(); else startOrbitAnim(); }
+function setOrbitDir(d) {
+  orbitDir=d;
+  document.getElementById('btn-cw').classList.toggle('active',d==='cw');
+  document.getElementById('btn-ccw').classList.toggle('active',d==='ccw');
+}
+function onSpeedChange(v) {
+  const n=parseFloat(v);
+  if (!isNaN(n)&&n>0) orbitSpeed=n;
+  document.getElementById('speed-label').textContent=orbitSpeed.toFixed(1)+'x';
+}
+
+// ─── Sensor mode toggle ───────────────────────────────────────────────────────
+function setSensorMode(m) {
+  sensorMode=m;
+  document.getElementById('btn-standard').classList.toggle('active',m==='standard');
+  document.getElementById('btn-orbital').classList.toggle('active',m==='orbital');
+  document.getElementById('standard-controls').style.display=m==='standard'?'':'none';
+  document.getElementById('orbital-controls').style.display=m==='orbital'?'':'none';
+  document.getElementById('standard-stats').style.display=m==='standard'?'':'none';
+  document.getElementById('orbital-stats').style.display=m==='orbital'?'':'none';
+  document.getElementById('header-sub').textContent = m==='orbital'
+    ? 'find where a scout circle orbiting a fixed anchor maximally covers the track'
+    : 'find where a circle maximally intersects a rectilinear polyline';
+  if (m!=='orbital') stopOrbitAnim();
+  bestPos=null; invalidateHeatmap(); draw();
+}
+
+// ─── Range controls ───────────────────────────────────────────────────────────
+function onDiamChange(v) {
+  const n=parseFloat(v); if (!isNaN(n)&&n>0) radius=n;
+  const el=document.getElementById('diam-label');
+  if (document.activeElement!==el) el.value=radius.toFixed(1);
+  bestPos=null; invalidateHeatmap(); draw();
+}
+function onDiamTyped(v) {
+  const n=parseFloat(v); if (!isNaN(n)&&n>0) {
+    radius=n;
+    const sl=document.getElementById('diam-slider'); sl.value=Math.min(n,parseFloat(sl.max));
+    bestPos=null; invalidateHeatmap(); draw();
+  }
+}
+function onAnchorRadChange(v) {
+  const n=parseFloat(v); if (!isNaN(n)&&n>0) anchorRadius=n;
+  const el=document.getElementById('anchor-rad-label');
+  if (document.activeElement!==el) el.value=anchorRadius.toFixed(1);
+  bestPos=null; invalidateHeatmap(); draw();
+}
+function onAnchorTyped(v) {
+  const n=parseFloat(v); if (!isNaN(n)&&n>0) {
+    anchorRadius=n;
+    const sl=document.getElementById('anchor-rad-slider'); sl.value=Math.min(n,parseFloat(sl.max));
+    bestPos=null; invalidateHeatmap(); draw();
+  }
+}
+function onScoutRadChange(v) {
+  const n=parseFloat(v); if (!isNaN(n)&&n>0) scoutRadius=n;
+  const el=document.getElementById('scout-rad-label');
+  if (document.activeElement!==el) el.value=scoutRadius.toFixed(1);
+  bestPos=null; invalidateHeatmap(); draw();
+}
+function onScoutTyped(v) {
+  const n=parseFloat(v); if (!isNaN(n)&&n>0) {
+    scoutRadius=n;
+    const sl=document.getElementById('scout-rad-slider'); sl.value=Math.min(n,parseFloat(sl.max));
+    bestPos=null; invalidateHeatmap(); draw();
+  }
+}
+
+// ─── Undo ─────────────────────────────────────────────────────────────────────
+const undoStack = [];
+function pushUndo() {
+  undoStack.push({
+    pts: pts.map(p=>({...p})), circle:{...circle}, radius,
+    anchorRadius, scoutRadius, zones: zones.map(z=>({...z})),
+    bestPos: bestPos?{...bestPos}:null,
+    mustHitPoint: mustHitPoint?{...mustHitPoint}:null
+  });
+  if (undoStack.length>50) undoStack.shift();
+}
+function undo() {
+  if (!undoStack.length) return;
+  const s=undoStack.pop();
+  pts=s.pts; circle=s.circle; radius=s.radius;
+  anchorRadius=s.anchorRadius; scoutRadius=s.scoutRadius;
+  zones=s.zones; bestPos=s.bestPos;
+  mustHitPoint=s.mustHitPoint||null;
+  invalidateHeatmap(); draw();
+}
+
+// ─── Optimizer helpers (main thread) ─────────────────────────────────────────
+function opt_segOverlap(p1, p2, ox, oy, r) {
+  const dx=p2.x-p1.x, dy=p2.y-p1.y;
+  const len=Math.hypot(dx,dy);
+  if(len<0.5) return 0;
+  const ux=dx/len, uy=dy/len;
+  const fx=p1.x-ox, fy=p1.y-oy;
+  const b=2*(fx*ux+fy*uy);
+  const c2=fx*fx+fy*fy-r*r;
+  const disc=b*b-4*c2;
+  if(disc<0) return 0;
+  const sq=Math.sqrt(disc);
+  const t0=Math.max(0,(-b-sq)/2), t1=Math.min(len,(-b+sq)/2);
+  return Math.max(0,t1-t0);
+}
+function opt_totalOverlap(optPts, ox, oy, r) {
+  let s=0;
+  for(let i=0;i<optPts.length-1;i++) s+=opt_segOverlap(optPts[i],optPts[i+1],ox,oy,r);
+  return s;
+}
+function opt_orbitalScore(optPts, ox, oy, ar, sr) {
+  const STEPS=60; let total=0;
+  for(let i=0;i<STEPS;i++){
+    const angle=(i/STEPS)*Math.PI*2;
+    total+=opt_totalOverlap(optPts, ox+Math.cos(angle)*ar, oy+Math.sin(angle)*ar, sr);
+  }
+  return total/STEPS;
+}
+function opt_inZone(zs, wx, wy) {
+  for(const z of zs){
+    const x1=Math.min(z.x1,z.x2),x2=Math.max(z.x1,z.x2);
+    const y1=Math.min(z.y1,z.y2),y2=Math.max(z.y1,z.y2);
+    if(wx>=x1&&wx<=x2&&wy>=y1&&wy<=y2) return true;
+  }
+  return false;
+}
+function opt_coversPoint(ox, oy, r, mh) {
+  if(!mh) return true;
+  return Math.hypot(ox-mh.x, oy-mh.y) <= r;
+}
+function opt_coversPointOrbital(ox, oy, ar, sr, mh) {
+  if(!mh) return true;
+  const STEPS=36;
+  for(let i=0;i<STEPS;i++){
+    const angle=(i/STEPS)*Math.PI*2;
+    if(Math.hypot(ox+Math.cos(angle)*ar-mh.x, oy+Math.sin(angle)*ar-mh.y)<=sr) return true;
+  }
+  return false;
+}
+function opt_isValid(ox, oy, zs, mh, r, ar, sr, orbital) {
+  if(opt_inZone(zs,ox,oy)) return false;
+  return orbital ? opt_coversPointOrbital(ox,oy,ar,sr,mh) : opt_coversPoint(ox,oy,r,mh);
+}
+
+// ─── Chunked main-thread optimizer (no Worker/blob needed) ───────────────────
+let optimizerCancel = false;
+
+function findBest() {
+  optimizerCancel = true; // cancel any prior run
+  const btn = document.querySelector('button.primary');
+  btn.textContent = '⏳ Optimizing…';
+  btn.disabled = true;
+
+  const optPts   = worldArr();
+  const optZones = zones.map(z=>({...z}));
+  const mh       = mustHitPoint ? {...mustHitPoint} : null;
+  const r        = radius, ar = anchorRadius, sr = scoutRadius;
+  const isOrb    = sensorMode === 'orbital';
+
+  let cumLen=0;
+  const segs=[];
+  for(let i=0;i<optPts.length-1;i++){
+    const l=Math.hypot(optPts[i+1].x-optPts[i].x,optPts[i+1].y-optPts[i].y);
+    segs.push({p1:optPts[i],p2:optPts[i+1],len:l}); cumLen+=l;
+  }
+  function pathPt(t){
+    let rem=t;
+    for(const seg of segs){
+      if(rem<=seg.len+0.001){
+        const frac=Math.min(rem/Math.max(seg.len,0.001),1);
+        return {x:seg.p1.x+(seg.p2.x-seg.p1.x)*frac, y:seg.p1.y+(seg.p2.y-seg.p1.y)*frac, seg};
+      }
+      rem-=seg.len;
+    }
+    const last=segs[segs.length-1];
+    return {x:last.p2.x,y:last.p2.y,seg:last};
+  }
+
+  let best=-1, bx=circle.x, by=circle.y;
+  function tryPt(ox,oy){
+    if(!opt_isValid(ox,oy,optZones,mh,r,ar,sr,isOrb)) return;
+    const sc=isOrb?opt_orbitalScore(optPts,ox,oy,ar,sr):opt_totalOverlap(optPts,ox,oy,r);
+    if(sc>best){best=sc;bx=ox;by=oy;}
+  }
+
+  // Build list of candidate batches to run sequentially via setTimeout
+  const PATH_STEPS  = Math.max(200,Math.ceil(cumLen/2));
+  const PERP_STEPS  = Math.max(300,Math.ceil(cumLen/1.5));
+  const refR        = isOrb ? ar : r;
+
+  const tasks = [];
+
+  // Task 1: path samples
+  tasks.push(()=>{
+    for(let s=0;s<=PATH_STEPS;s++){
+      const{x,y}=pathPt((s/PATH_STEPS)*cumLen); tryPt(x,y);
+    }
+  });
+
+  // Task 2: perpendicular offsets
+  tasks.push(()=>{
+    const perp = isOrb ? 1.5 : 1.0;
+    const step = isOrb ? refR*0.2 : refR*0.05;
+    for(let s=0;s<=PERP_STEPS;s++){
+      const{x,y,seg}=pathPt((s/PERP_STEPS)*cumLen);
+      const dx=seg.p2.x-seg.p1.x,dy=seg.p2.y-seg.p1.y;
+      const len2=Math.hypot(dx,dy)||1,nx=-dy/len2,ny=dx/len2;
+      for(let d=step;d<=refR*perp;d+=step){tryPt(x+nx*d,y+ny*d);tryPt(x-nx*d,y-ny*d);}
+    }
+  });
+
+  // Task 3: node halos
+  tasks.push(()=>{
+    const maxD = isOrb ? refR*2 : refR;
+    const dStep = isOrb ? refR*0.2 : refR*0.1;
+    const aStep = isOrb ? Math.PI/20 : Math.PI/24;
+    for(const pt of optPts)
+      for(let angle=0;angle<Math.PI*2;angle+=aStep)
+        for(let dist=dStep;dist<=maxD;dist+=dStep)
+          tryPt(pt.x+Math.cos(angle)*dist,pt.y+Math.sin(angle)*dist);
+  });
+
+  // Task 4: must-hit point halo
+  tasks.push(()=>{
+    if(!mh) return;
+    const maxD = isOrb ? refR*1.5 : refR;
+    const dStep = isOrb ? refR*0.15 : refR*0.1;
+    for(let angle=0;angle<Math.PI*2;angle+=Math.PI/16)
+      for(let dist=0;dist<=maxD;dist+=dStep)
+        tryPt(mh.x+Math.cos(angle)*dist,mh.y+Math.sin(angle)*dist);
+  });
+
+  // Task 5: hill-climb
+  tasks.push(()=>{
+    let stepSize=refR*0.5;
+    while(stepSize>0.2){
+      let moved=false;
+      for(const[ddx,ddy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]]){
+        const nx=bx+ddx*stepSize,ny=by+ddy*stepSize;
+        if(!opt_isValid(nx,ny,optZones,mh,r,ar,sr,isOrb)) continue;
+        const sc=isOrb?opt_orbitalScore(optPts,nx,ny,ar,sr):opt_totalOverlap(optPts,nx,ny,r);
+        if(sc>best){best=sc;bx=nx;by=ny;moved=true;break;}
+      }
+      if(!moved) stepSize*=0.5;
+    }
+  });
+
+  optimizerCancel = false;
+  const token = {}; // unique object so we can detect cancellation
+  let taskIdx = 0;
+  const runToken = token;
+
+  function runNext() {
+    if(optimizerCancel || runToken !== token) return; // cancelled
+    if(taskIdx >= tasks.length) {
+      // Done
+      btn.textContent = '▶ Find best position';
+      btn.disabled = false;
+      bestPos = {x:bx, y:by, ov:best};
+      const startX=circle.x, startY=circle.y;
+      let start=null;
+      if(animFrame) cancelAnimationFrame(animFrame);
+      function step(ts){
+        if(!start) start=ts;
+        const f=Math.min((ts-start)/600,1);
+        const ease=f<0.5?2*f*f:1-Math.pow(-2*f+2,2)/2;
+        circle.x=startX+(bx-startX)*ease; circle.y=startY+(by-startY)*ease;
+        draw(); if(f<1) animFrame=requestAnimationFrame(step);
+      }
+      animFrame=requestAnimationFrame(step);
+      return;
+    }
+    tasks[taskIdx++]();
+    setTimeout(runNext, 0);
+  }
+
+  setTimeout(runNext, 0);
+}
+
+// ─── View / reset ─────────────────────────────────────────────────────────────
 function fitView() {
   if (!pts.length) return;
-  const wa = worldArr();
-  const xs = wa.map(p => p.x), ys = wa.map(p => p.y);
-  const minX = Math.min(...xs), maxX = Math.max(...xs);
-  const minY = Math.min(...ys), maxY = Math.max(...ys);
-  const pad = 40;
-  const pathW = maxX - minX || 1, pathH = maxY - minY || 1;
-  zoom = Math.min((W - pad*2) / pathW, (H - pad*2) / pathH);
-  panX = (W - pathW * zoom) / 2 - minX * zoom;
-  panY = (H - pathH * zoom) / 2 - minY * zoom;
+  const wa=worldArr();
+  const xs=wa.map(p=>p.x), ys=wa.map(p=>p.y);
+  const minX=Math.min(...xs), maxX=Math.max(...xs);
+  const minY=Math.min(...ys), maxY=Math.max(...ys);
+  const pad=50, pathW=maxX-minX||1, pathH=maxY-minY||1;
+  zoom=Math.min((W-pad*2)/pathW,(H-pad*2)/pathH);
+  panX=(W-pathW*zoom)/2-minX*zoom;
+  panY=(H-pathH*zoom)/2-minY*zoom;
 }
 
 function resetPath() {
   pushUndo();
-  pts = [
-    {x: -10, y: 0},
-    {x:  10, y: 0},
-  ];
-  circle = { x: pts[0].x, y: pts[0].y };
-  bestPos = null;
-  fitView();
-  draw();
+  pts=[{x:-10,y:0},{x:10,y:0}];
+  circle={x:0,y:0}; bestPos=null; zones=[];
+  mustHitPoint=null;
+  fitView(); invalidateHeatmap(); draw();
 }
 
-// --- Drawing ---
-// Polyfill for ctx.roundRect (not available in all engines)
-function roundRect(ctx2, x, y, w, h, rad) {
-  rad = Math.min(rad, w/2, h/2);
-  ctx2.beginPath();
-  ctx2.moveTo(x + rad, y);
-  ctx2.lineTo(x + w - rad, y);
-  ctx2.arcTo(x + w, y, x + w, y + rad, rad);
-  ctx2.lineTo(x + w, y + h - rad);
-  ctx2.arcTo(x + w, y + h, x + w - rad, y + h, rad);
-  ctx2.lineTo(x + rad, y + h);
-  ctx2.arcTo(x, y + h, x, y + h - rad, rad);
-  ctx2.lineTo(x, y + rad);
-  ctx2.arcTo(x, y, x + rad, y, rad);
-  ctx2.closePath();
+function centeredCoords() {
+  const ap=worldArr(); if(!ap.length) return [];
+  const xs=ap.map(p=>p.x), ys=ap.map(p=>p.y);
+  const cx0=(Math.min(...xs)+Math.max(...xs))/2;
+  const cy0=(Math.min(...ys)+Math.max(...ys))/2;
+  return ap.map(p=>[Math.round(p.x-cx0),Math.round(p.y-cy0)]);
 }
 
-function draw() {
-  ctx.clearRect(0,0,W,H);
-
-  const ap = pxArr();       // screen positions
-  const wa = worldArr();    // world positions
-  const ocx = cx(), ocy = cy(), r = cr(); // screen circle
-  const wox = wcx(), woy = wcy();         // world circle center
-
-  // Heatmap (drawn beneath everything)
-  if (heatmapOn) renderHeatmap();
-
-  // Background grid (account for pan/zoom)
-  const gridScreen = GRID * zoom;
-  const offsetX = ((panX % gridScreen) + gridScreen) % gridScreen;
-  const offsetY = ((panY % gridScreen) + gridScreen) % gridScreen;
-  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
-  ctx.lineWidth = 1;
-  for (let x = offsetX; x < W; x += gridScreen) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-  for (let y = offsetY; y < H; y += gridScreen) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-
-  const ov = totalOverlap(wox, woy, wr());
-  const inZone = circleInAnyZone(wox, woy);
-
-  // Draw exclusion zones
-  for (const z of zones) {
-    const s1 = toScreen(Math.min(z.x1,z.x2), Math.min(z.y1,z.y2));
-    const s2 = toScreen(Math.max(z.x1,z.x2), Math.max(z.y1,z.y2));
-    const sw2 = s2.x - s1.x, sh2 = s2.y - s1.y;
-    ctx.fillStyle = 'rgba(240,74,106,0.13)';
-    ctx.fillRect(s1.x, s1.y, sw2, sh2);
-    ctx.strokeStyle = 'rgba(240,74,106,0.55)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4,3]);
-    ctx.strokeRect(s1.x, s1.y, sw2, sh2);
-    ctx.setLineDash([]);
-  }
-
-  // Draw zone being dragged
-  if (zoneDrag) {
-    const s1 = toScreen(Math.min(zoneDrag.wx, zoneDrag.cx), Math.min(zoneDrag.wy, zoneDrag.cy));
-    const s2 = toScreen(Math.max(zoneDrag.wx, zoneDrag.cx), Math.max(zoneDrag.wy, zoneDrag.cy));
-    ctx.fillStyle = 'rgba(240,74,106,0.18)';
-    ctx.fillRect(s1.x, s1.y, s2.x-s1.x, s2.y-s1.y);
-    ctx.strokeStyle = 'rgba(240,74,106,0.8)';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([4,3]);
-    ctx.strokeRect(s1.x, s1.y, s2.x-s1.x, s2.y-s1.y);
-    ctx.setLineDash([]);
-  }
-
-  // Draw highlighted overlap segments (world space geometry → screen coords)
-  ctx.lineCap = 'round';
-  for (let i = 0; i < wa.length-1; i++) {
-    const chord = segChords(wa[i], wa[i+1], wox, woy, wr());
-    if (!chord) continue;
-    const s0 = toScreen(chord[0].x, chord[0].y);
-    const s1 = toScreen(chord[1].x, chord[1].y);
-    ctx.strokeStyle = '#4af0b0';
-    ctx.lineWidth = 5;
-    ctx.globalAlpha = 0.9;
-    ctx.beginPath();
-    ctx.moveTo(s0.x, s0.y);
-    ctx.lineTo(s1.x, s1.y);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-  }
-
-  // Draw polyline
-  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-  ctx.lineWidth = 2;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  ctx.setLineDash([]);
-  ctx.beginPath();
-  ctx.moveTo(ap[0].x, ap[0].y);
-  for (let i = 1; i < ap.length; i++) ctx.lineTo(ap[i].x, ap[i].y);
-  ctx.stroke();
-
-  // Path endpoints
-  ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.beginPath(); ctx.arc(ap[0].x, ap[0].y, 4, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(ap[ap.length-1].x, ap[ap.length-1].y, 4, 0, Math.PI*2); ctx.fill();
-
-  // Corner nodes
-  for (let i = 1; i < ap.length-1; i++) {
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-    ctx.fillStyle = '#0d0f12';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.arc(ap[i].x, ap[i].y, 5, 0, Math.PI*2);
-    ctx.fill(); ctx.stroke();
-  }
-
-  // Segment length labels in move mode
-  if (mode === 'move') {
-    ctx.font = '400 10px "IBM Plex Mono", monospace';
-    ctx.textAlign = 'center';
-    for (let i = 0; i < wa.length - 1; i++) {
-      const segLen = Math.hypot(wa[i+1].x - wa[i].x, wa[i+1].y - wa[i].y);
-      const label = segLen.toFixed(1);
-      // midpoint screen
-      const mx = (ap[i].x + ap[i+1].x) / 2;
-      const my = (ap[i].y + ap[i+1].y) / 2;
-      // perpendicular offset (always render label on one side)
-      const sdx = ap[i+1].x - ap[i].x, sdy = ap[i+1].y - ap[i].y;
-      const slen = Math.hypot(sdx, sdy) || 1;
-      const nx = -sdy / slen, ny = sdx / slen;
-      const off = 13;
-      const lx = mx + nx * off, ly = my + ny * off;
-      // only show when segment is long enough on screen to be readable
-      const screenLen = Math.hypot(ap[i+1].x - ap[i].x, ap[i+1].y - ap[i].y);
-      if (screenLen < 30) continue;
-      const tw = ctx.measureText(label).width;
-      ctx.globalAlpha = Math.min(1, (screenLen - 30) / 40);
-      ctx.fillStyle = 'rgba(13,15,18,0.78)';
-      roundRect(ctx, lx - tw/2 - 4, ly - 8, tw + 8, 13, 3);
-      ctx.fill();
-      ctx.fillStyle = '#7a8099';
-      ctx.fillText(label, lx, ly + 2);
-    }
-    ctx.globalAlpha = 1;
-    ctx.textAlign = 'left';
-  }
-
-  // Best position ring (bestPos stored in world coords)
-  if (bestPos) {
-    const bs = toScreen(bestPos.x, bestPos.y);
-    ctx.strokeStyle = '#f0b04a';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([5,4]);
-    ctx.beginPath();
-    ctx.arc(bs.x, bs.y, r, 0, Math.PI*2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = '#f0b04a';
-    ctx.globalAlpha = 0.6;
-    ctx.beginPath(); ctx.arc(bs.x, bs.y, 3, 0, Math.PI*2); ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.font = '500 10px "IBM Plex Mono", monospace';
-    ctx.fillStyle = '#f0b04a';
-    ctx.fillText('best', bs.x + r + 8, bs.y + 4);
-  }
-
-  // Circle fill — red tint if in exclusion zone
-  ctx.beginPath();
-  ctx.arc(ocx, ocy, r, 0, Math.PI*2);
-  const grad = ctx.createRadialGradient(ocx, ocy, 0, ocx, ocy, r);
-  if (inZone) {
-    grad.addColorStop(0, 'rgba(240,74,106,0.18)');
-    grad.addColorStop(1, 'rgba(240,74,106,0.07)');
-  } else {
-    grad.addColorStop(0, 'rgba(74,180,240,0.10)');
-    grad.addColorStop(1, 'rgba(74,180,240,0.04)');
-  }
-  ctx.fillStyle = grad;
-  ctx.fill();
-
-  // Circle stroke
-  ctx.strokeStyle = inZone ? '#f04a6a' : '#4ab4f0';
-  ctx.lineWidth = inZone ? 2 : 1.5;
-  ctx.setLineDash([]);
-  ctx.beginPath();
-  ctx.arc(ocx, ocy, r, 0, Math.PI*2);
-  ctx.stroke();
-
-  // Circle center dot
-  ctx.fillStyle = inZone ? '#f04a6a' : '#4ab4f0';
-  ctx.beginPath(); ctx.arc(ocx, ocy, 3, 0, Math.PI*2); ctx.fill();
-
-  // Radius drag handle (east edge)
-  const rhx = ocx + r, rhy = ocy;
-  const isHoveringHandle = dragging && dragging.type === 'radius';
-  ctx.fillStyle = isHoveringHandle ? '#f0b04a' : '#4ab4f0';
-  ctx.strokeStyle = '#0d0f12';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  const hs = isHoveringHandle ? 6 : 5;
-  ctx.rect(rhx - hs/2, rhy - hs/2, hs, hs);
-  ctx.fill();
-  ctx.stroke();
-  // Dashed radius line when dragging handle
-  if (isHoveringHandle) {
-    ctx.strokeStyle = 'rgba(240,176,74,0.5)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 3]);
-    ctx.beginPath(); ctx.moveTo(ocx, ocy); ctx.lineTo(rhx, rhy); ctx.stroke();
-    ctx.setLineDash([]);
-  }
-
-  // Overlap label near circle
-  const labelX = ocx + r + 12, labelY = ocy - 6;
-  const pl2 = pathLength();
-  const pct2 = pl2 > 0 ? (ov / pl2 * 100) : 0;
-  ctx.font = '400 11px "IBM Plex Mono", monospace';
-  ctx.fillStyle = '#4ab4f0';
-  ctx.fillText(`range=${radius.toFixed(1)}`, labelX, labelY);
-  ctx.fillStyle = '#4af0b0';
-  ctx.fillText(`coverage=${ov.toFixed(1)} studs`, labelX, labelY + 14);
-  ctx.fillStyle = '#f0b04a';
-  ctx.fillText(`${pct2.toFixed(1)}% covered`, labelX, labelY + 28);
-
-  // Snap crosshair while dragging node
-  if (dragging && dragging.type === 'node') {
-    const dp = pxArr()[dragging.idx];
-    const R = 7;
-    ctx.strokeStyle = 'rgba(74,240,176,0.7)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([3,3]);
-    ctx.beginPath(); ctx.moveTo(dp.x - R, dp.y); ctx.lineTo(dp.x + R, dp.y); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(dp.x, dp.y - R); ctx.lineTo(dp.x, dp.y + R); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.strokeStyle = 'rgba(74,240,176,0.5)';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(dp.x, dp.y, R + 3, 0, Math.PI*2); ctx.stroke();
-  }
-
-  // Delta label while dragging
-  if (dragging && dragDelta && (Math.abs(dragDelta.dx) > 0.5 || Math.abs(dragDelta.dy) > 0.5)) {
-    let labelAnchor;
-    if (dragging === 'circle') {
-      labelAnchor = { x: ocx, y: ocy };
-    } else {
-      const dp = pxArr()[dragging.idx];
-      labelAnchor = { x: dp.x, y: dp.y };
-    }
-    const dx = Math.round(dragDelta.dx), dy = Math.round(dragDelta.dy);
-    const sign = n => n >= 0 ? '+' + n : '' + n;
-    const label = `Δ${sign(dx)}, ${sign(dy)} px`;
-    ctx.font = '500 11px "IBM Plex Mono", monospace';
-    const metrics = ctx.measureText(label);
-    const pad = 6, lh = 16;
-    const lx = labelAnchor.x + 14;
-    const ly = labelAnchor.y - 22;
-    ctx.fillStyle = 'rgba(13,15,18,0.85)';
-    roundRect(ctx, lx - pad, ly - lh + 3, metrics.width + pad * 2, lh + 4, 3);
-    ctx.fill();
-    ctx.fillStyle = '#f0b04a';
-    ctx.fillText(label, lx, ly);
-  }
-
-  // Update stats (world coords)
-  document.getElementById('pos').textContent = `${Math.round(wox)}, ${Math.round(woy)}`;
-  document.getElementById('ov').textContent = ov.toFixed(1) + ' studs';
-  const pl = pathLength();
-  document.getElementById('plen').textContent = Math.round(pl) + ' studs';
-  document.getElementById('pct').textContent = pl > 0 ? (ov/pl*100).toFixed(1) + '%' : '—';
-  const undoEl = document.getElementById('undo-count');
-  if (undoEl) undoEl.textContent = undoStack.length ? `(${undoStack.length})` : '';
-
-  // Highlight endpoints in add mode
-  if (mode === 'add' && ap.length >= 2) {
-    for (const ep of [ap[0], ap[ap.length-1]]) {
-      ctx.strokeStyle = '#4af0b0';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([3,2]);
-      ctx.beginPath(); ctx.arc(ep.x, ep.y, 8 / zoom * zoom, 0, Math.PI*2); ctx.stroke();
-      ctx.setLineDash([]);
-    }
-  }
-
-}
-
-// --- Undo ---
-const undoStack = [];
-const MAX_UNDO = 50;
-
-function pushUndo() {
-  undoStack.push({
-    pts: pts.map(p => ({...p})),
-    circle: {...circle},
-    radius,
-    zones: zones.map(z => ({...z})),
-    bestPos: bestPos ? {...bestPos} : null,
-  });
-  if (undoStack.length > MAX_UNDO) undoStack.shift();
-}
-
-function undo() {
-  if (!undoStack.length) return;
-  const state = undoStack.pop();
-  pts = state.pts;
-  circle = state.circle;
-  radius = state.radius;
-  zones = state.zones;
-  bestPos = state.bestPos;
-  document.getElementById('rad').value = radius;
-  invalidateHeatmap();
-  draw();
-}
-
-// --- Interaction ---
+// ─── Mode & interaction ───────────────────────────────────────────────────────
 function setMode(m) {
-  mode = m;
-  ['move','add','del','zone','zonedel'].forEach(n => {
-    const b = document.getElementById('btn-'+n);
-    if (b) b.classList.toggle('active', n===m);
+  mode=m;
+  ['move','add','del','zone','zonedel','musthit'].forEach(n=>{
+    const b=document.getElementById('btn-'+n);
+    if (b) b.classList.toggle('active',n===m);
   });
-  const cursors = { move:'crosshair', add:'cell', del:'not-allowed', zone:'crosshair', zonedel:'pointer' };
-  canvas.style.cursor = cursors[m] || 'crosshair';
+  const cursors={move:'crosshair',add:'cell',del:'not-allowed',zone:'crosshair',zonedel:'pointer',musthit:'crosshair'};
+  canvas.style.cursor=cursors[m]||'crosshair';
 }
-
-function clearZones() { pushUndo(); zones = []; bestPos = null; draw(); }
-
-// Hover cursor update for radius handle
-canvas.addEventListener('mousemove', e => {
-  if (dragging || zoneDrag || panning || spaceDown || mode !== 'move') return;
-  const {x, y} = getLogical(e);
-  canvas.style.cursor = hitRadiusHandle(x, y) ? 'ew-resize' : 'crosshair';
-});
 
 function getLogical(e) {
-  const r = canvas.getBoundingClientRect();
-  const scaleX = W / r.width, scaleY = H / r.height;
-  const src = e.touches ? e.touches[0] : e;
-  const sx = (src.clientX - r.left) * scaleX;
-  const sy = (src.clientY - r.top) * scaleY;
-  return toWorld(sx, sy);
+  const r=canvas.getBoundingClientRect();
+  const scaleX=W/r.width, scaleY=H/r.height;
+  const src=e.touches?e.touches[0]:e;
+  return toWorld((src.clientX-r.left)*scaleX, (src.clientY-r.top)*scaleY);
 }
-
 function getScreen(e) {
-  const r = canvas.getBoundingClientRect();
-  const scaleX = W / r.width, scaleY = H / r.height;
-  const src = e.touches ? e.touches[0] : e;
-  return { x: (src.clientX - r.left) * scaleX, y: (src.clientY - r.top) * scaleY };
+  const r=canvas.getBoundingClientRect();
+  const scaleX=W/r.width, scaleY=H/r.height;
+  const src=e.touches?e.touches[0]:e;
+  return {x:(src.clientX-r.left)*scaleX, y:(src.clientY-r.top)*scaleY};
 }
 
-function hitCircle(lx, ly) {
-  return Math.hypot(lx - wcx(), ly - wcy()) < Math.max(radius, 16 / zoom);
+// ─── Hit testing ─────────────────────────────────────────────────────────────
+function hitCircle(wx, wy) { return Math.hypot(wx-circle.x, wy-circle.y) <= wr()+2/zoom; }
+function hitRadius(wx, wy) {
+  const hx=circle.x+wr(), hy=circle.y;
+  return Math.hypot(wx-hx, wy-hy) <= 4/zoom;
 }
-
-// Returns true when cursor is near the radius drag handle (east edge of circle)
-function hitRadiusHandle(lx, ly) {
-  const hx = wcx() + wr(); // handle world x
-  const hy = wcy();         // handle world y
-  return Math.hypot(lx - hx, ly - hy) < 10 / zoom;
-}
-
-function hitNode(lx, ly) {
-  const ap = worldArr();
-  for (let i = 0; i < ap.length; i++) {
-    if (Math.hypot(lx-ap[i].x, ly-ap[i].y) < 10 / zoom) return i;
-  }
+function hitNode(wx, wy) {
+  for (let i=0; i<pts.length; i++)
+    if (Math.hypot(wx-pts[i].x, wy-pts[i].y) <= 6/zoom) return i;
   return -1;
 }
-
-// Check if circle center (world) is inside any zone
-function circleInAnyZone(wx, wy) {
-  for (const z of zones) {
-    const x1 = Math.min(z.x1,z.x2), x2 = Math.max(z.x1,z.x2);
-    const y1 = Math.min(z.y1,z.y2), y2 = Math.max(z.y1,z.y2);
-    if (wx >= x1 && wx <= x2 && wy >= y1 && wy <= y2) return true;
+function hitSegment(wx, wy) {
+  const wa=worldArr();
+  for (let i=0; i<wa.length-1; i++) {
+    const dx=wa[i+1].x-wa[i].x, dy=wa[i+1].y-wa[i].y;
+    const len=Math.hypot(dx,dy); if(len<0.001) continue;
+    const t=Math.max(0,Math.min(1,((wx-wa[i].x)*dx+(wy-wa[i].y)*dy)/(len*len)));
+    const px=wa[i].x+t*dx, py=wa[i].y+t*dy;
+    if(Math.hypot(wx-px,wy-py)<=5/zoom) return {seg:i, t, px, py};
   }
-  return false;
+  return null;
 }
 
-// Return index of zone containing world point, or -1
-function hitZone(wx, wy) {
-  for (let i = zones.length-1; i >= 0; i--) {
-    const z = zones[i];
-    const x1 = Math.min(z.x1,z.x2), x2 = Math.max(z.x1,z.x2);
-    const y1 = Math.min(z.y1,z.y2), y2 = Math.max(z.y1,z.y2);
-    if (wx >= x1 && wx <= x2 && wy >= y1 && wy <= y2) return i;
-  }
-  return -1;
-}
+// ─── Pointer events ───────────────────────────────────────────────────────────
+let isPan=false, panStart=null;
+let isZoneDrag=false;
 
-function nearestSegPoint(lx, ly) {
-  const ap = worldArr();
-  let best = {segIdx:0, t:0, dist:Infinity, px:0, py:0};
-  for (let i = 0; i < ap.length-1; i++) {
-    const dx = ap[i+1].x-ap[i].x, dy = ap[i+1].y-ap[i].y;
-    const len2 = dx*dx+dy*dy;
-    if (len2 < 0.001) continue;
-    const t = Math.max(0, Math.min(1, ((lx-ap[i].x)*dx+(ly-ap[i].y)*dy)/len2));
-    const px2 = ap[i].x+dx*t, py2 = ap[i].y+dy*t;
-    const d = Math.hypot(lx-px2, ly-py2);
-    if (d < best.dist) best = {segIdx:i, t, dist:d, px:px2, py:py2};
-  }
-  return best;
-}
+canvas.addEventListener('contextmenu', e=>e.preventDefault());
 
-canvas.addEventListener('mousedown', onDown);
-canvas.addEventListener('mousemove', onMove);
-canvas.addEventListener('mouseup', onUp);
-canvas.addEventListener('touchstart', e => { e.preventDefault(); onDown(e); }, {passive:false});
-canvas.addEventListener('touchmove', e => { e.preventDefault(); onMove(e); }, {passive:false});
-canvas.addEventListener('touchend', e => { e.preventDefault(); onUp(e); }, {passive:false});
-
-canvas.addEventListener('contextmenu', e => e.preventDefault());
-
-canvas.addEventListener('wheel', e => {
+canvas.addEventListener('pointerdown', e=>{
   e.preventDefault();
-  const { x: sx, y: sy } = getScreen(e);
-  // Normalize delta — trackpads send large deltaY values, clamp the zoom step
-  const delta = Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 50);
-  const factor = Math.pow(0.999, delta); // smooth exponential zoom
-  const newZoom = Math.max(0.05, Math.min(50, zoom * factor));
-  const scale = newZoom / zoom;
-  panX = sx - (sx - panX) * scale;
-  panY = sy - (sy - panY) * scale;
-  zoom = newZoom;
-  bestPos = null;
-  invalidateHeatmap();
-  draw();
-}, {passive: false});
+  canvas.setPointerCapture(e.pointerId);
+  const {x:wx, y:wy}=getLogical(e);
+  const {x:sx, y:sy}=getScreen(e);
 
-// Middle-mouse / space pan
-let panning = false, panStart = null;
-let spaceDown = false;
-
-document.addEventListener('keydown', e => {
-  if (e.code === 'Space') { spaceDown = true; canvas.style.cursor = 'grab'; e.preventDefault(); }
-  if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
-});
-document.addEventListener('keyup', e => {
-  if (e.code === 'Space') {
-    spaceDown = false;
-    const cursors = { move:'crosshair', add:'cell', del:'not-allowed', zone:'crosshair', zonedel:'pointer' };
-    if (!panning) canvas.style.cursor = cursors[mode] || 'crosshair';
+  if (e.button===2) {
+    isPan=true; panStart={sx, sy, px:panX, py:panY}; return;
   }
-});
 
-canvas.addEventListener('mousedown', e => {
-  if (e.button === 2 || e.button === 1 || (e.button === 0 && spaceDown)) {
-    e.preventDefault();
-    panning = true;
-    panStart = { x: e.clientX - panX, y: e.clientY - panY };
-    canvas.style.cursor = 'grabbing';
+  if (mode==='musthit') {
+    pushUndo();
+    mustHitPoint={x:wx, y:wy};
+    bestPos=null;
+    invalidateHeatmap(); draw(); return;
   }
-});
-window.addEventListener('mousemove', e => {
-  if (panning) {
-    panX = e.clientX - panStart.x;
-    panY = e.clientY - panStart.y;
-    invalidateHeatmap();
-    draw();
-  }
-});
-window.addEventListener('mouseup', e => {
-  if (panning && (e.button === 2 || e.button === 1 || e.button === 0)) {
-    panning = false;
-    const cursors = { move:'crosshair', add:'cell', del:'not-allowed', zone:'crosshair', zonedel:'pointer' };
-    canvas.style.cursor = spaceDown ? 'grab' : (cursors[mode] || 'crosshair');
-  }
-});
 
-function onDown(e) {
-  if (e.button === 2 || e.button === 1 || (e.button === 0 && spaceDown)) return; // handled by pan
-  const {x, y} = getLogical(e);
-
-  if (mode === 'zone') {
-    zoneDrag = { wx: x, wy: y, cx: x, cy: y };
+  if (mode==='zone') {
+    isZoneDrag=true;
+    zoneDrag={wx, wy, cx:wx, cy:wy}; return;
+  }
+  if (mode==='zonedel') {
+    const zi=hitZone(wx,wy);
+    if(zi>=0){pushUndo();zones.splice(zi,1);bestPos=null;invalidateHeatmap();draw();}
     return;
   }
-  if (mode === 'zonedel') {
-    const idx = hitZone(x, y);
-    if (idx >= 0) { pushUndo(); zones.splice(idx, 1); bestPos = null; draw(); }
+  if (mode==='del') {
+    const ni=hitNode(wx,wy);
+    if(ni>=0&&pts.length>2){pushUndo();pts.splice(ni,1);bestPos=null;invalidateHeatmap();draw();}
     return;
   }
-  if (mode === 'move') {
-    const ni = hitNode(x, y);
-    if (ni >= 0) {
-      pushUndo();
-      const wp = worldArr()[ni];
-      dragStartWorld = {x: wp.x, y: wp.y};
-      dragDelta = {dx: 0, dy: 0};
-      dragging = {type:'node', idx:ni};
-      return;
-    }
-    if (hitRadiusHandle(x, y)) {
-      pushUndo();
-      dragStartWorld = {x: wr(), y: 0};
-      dragging = {type:'radius'};
-      return;
-    }
-    if (hitCircle(x, y)) {
-      pushUndo();
-      dragStartWorld = {x: wcx(), y: wcy()};
-      dragDelta = {dx: 0, dy: 0};
-      dragging = 'circle';
-      return;
-    }
+  if (mode==='add') {
+    const wa=worldArr();
+    const distToFirst=Math.hypot(wx-wa[0].x,wy-wa[0].y);
+    const distToLast=Math.hypot(wx-wa[wa.length-1].x,wy-wa[wa.length-1].y);
+    const seg=hitSegment(wx,wy);
+    pushUndo();
+    if(distToFirst<8/zoom){pts.unshift({x:wx,y:wy});}
+    else if(distToLast<8/zoom){pts.push({x:wx,y:wy});}
+    else if(seg){pts.splice(seg.seg+1,0,{x:seg.px,y:seg.py});}
+    else if(distToFirst<distToLast){pts.unshift({x:wx,y:wy});}
+    else{pts.push({x:wx,y:wy});}
+    bestPos=null; invalidateHeatmap(); draw(); return;
   }
-  if (mode === 'add') {
-    const wa = worldArr();
-    const THRESH = 10 / zoom;
-
-    // Check if clicking near first endpoint → prepend new point and drag it
-    if (Math.hypot(x - wa[0].x, y - wa[0].y) < THRESH) {
-      pushUndo();
-      const snapped = snapGrid(x, y);
-      pts.unshift({x: snapped.x, y: snapped.y});
-      dragStartWorld = {x: snapped.x, y: snapped.y};
-      dragDelta = {dx: 0, dy: 0};
-      dragging = {type:'node', idx: 0};
-      draw();
-      return;
+  if (mode==='move') {
+    if(sensorMode==='standard'&&hitRadius(wx,wy)){
+      dragging={type:'radius'}; return;
     }
-
-    // Check if clicking near last endpoint → append new point and drag it
-    const last = wa[wa.length - 1];
-    if (Math.hypot(x - last.x, y - last.y) < THRESH) {
-      pushUndo();
-      const snapped = snapGrid(x, y);
-      pts.push({x: snapped.x, y: snapped.y});
-      dragStartWorld = {x: snapped.x, y: snapped.y};
-      dragDelta = {dx: 0, dy: 0};
-      dragging = {type:'node', idx: pts.length - 1};
-      draw();
-      return;
+    if(hitCircle(wx,wy)){
+      dragging={type:'circle',offX:wx-circle.x,offY:wy-circle.y}; return;
     }
-
-    // Otherwise insert along nearest segment
-    const seg = nearestSegPoint(x, y);
-    if (seg.dist < 20 / zoom) {
-      pushUndo();
-      const snapped = snapGrid(seg.px, seg.py);
-      pts.splice(seg.segIdx+1, 0, {x: snapped.x, y: snapped.y});
-      dragStartWorld = {x: snapped.x, y: snapped.y};
-      dragDelta = {dx: 0, dy: 0};
-      dragging = {type:'node', idx:seg.segIdx+1};
-      draw();
-    }
-    return;
+    const ni=hitNode(wx,wy);
+    if(ni>=0){dragging={type:'node',idx:ni,offX:wx-pts[ni].x,offY:wy-pts[ni].y}; return;}
+    isPan=true; panStart={sx, sy, px:panX, py:panY};
   }
-  if (mode === 'del') {
-    const ni = hitNode(x, y);
-    if (ni >= 0 && pts.length > 2) {
-      pushUndo();
-      pts.splice(ni, 1);
-      bestPos = null;
-      draw();
-    }
-    return;
-  }
-}
+});
 
-function onMove(e) {
-  const {x, y} = getLogical(e);
-  if (zoneDrag) {
-    zoneDrag.cx = x; zoneDrag.cy = y;
-    draw();
-    return;
+canvas.addEventListener('pointermove', e=>{
+  e.preventDefault();
+  const {x:wx, y:wy}=getLogical(e);
+  const {x:sx, y:sy}=getScreen(e);
+
+  if (isPan&&panStart) {
+    panX=panStart.px+(sx-panStart.sx); panY=panStart.py+(sy-panStart.sy);
+    invalidateHeatmap(); draw(); return;
+  }
+  if (isZoneDrag&&zoneDrag) {
+    zoneDrag.cx=wx; zoneDrag.cy=wy; draw(); return;
   }
   if (!dragging) return;
-  if (dragging === 'circle') {
-    circle.x = x;
-    circle.y = y;
-    if (dragStartWorld) dragDelta = {dx: x - dragStartWorld.x, dy: y - dragStartWorld.y};
-  } else if (dragging.type === 'radius') {
-    const dist = Math.hypot(x - wcx(), y - wcy());
-    radius = Math.max(0.1, dist);
-    bestPos = null;
-    document.getElementById('rad').value = radius.toFixed(2);
-  } else if (dragging.type === 'node') {
-    const snapped = snapGrid(x, y);
-    pts[dragging.idx] = {x: snapped.x, y: snapped.y};
-    if (dragStartWorld) dragDelta = {dx: snapped.x - dragStartWorld.x, dy: snapped.y - dragStartWorld.y};
-    bestPos = null;
-    invalidateHeatmap();
+
+  if (dragging.type==='radius') {
+    const dist=Math.hypot(wx-circle.x, wy-circle.y);
+    if(dist>0.1){radius=dist;}
+    const sl=document.getElementById('diam-slider'); sl.value=Math.min(radius,parseFloat(sl.max));
+    document.getElementById('diam-label').value=radius.toFixed(1);
+    bestPos=null; invalidateHeatmap(); draw(); return;
   }
-  draw();
-}
-
-function onUp() {
-  if (zoneDrag) {
-    const w = Math.abs(zoneDrag.cx - zoneDrag.wx);
-    const h = Math.abs(zoneDrag.cy - zoneDrag.wy);
-    if (w > 4 / zoom && h > 4 / zoom) {
-      pushUndo();
-      zones.push({ x1: zoneDrag.wx, y1: zoneDrag.wy, x2: zoneDrag.cx, y2: zoneDrag.cy });
-      bestPos = null;
-    }
-    zoneDrag = null;
-    draw();
-    return;
+  if (dragging.type==='circle') {
+    const nx=wx-dragging.offX, ny=wy-dragging.offY;
+    circle.x=nx; circle.y=ny; draw(); return;
   }
-  dragging = null; dragStartWorld = null; dragDelta = null; draw();
-}
+  if (dragging.type==='node') {
+    const nx=wx-dragging.offX, ny=wy-dragging.offY;
+    const sg=snapGrid(nx,ny); pts[dragging.idx].x=sg.x; pts[dragging.idx].y=sg.y;
+    bestPos=null; invalidateHeatmap(); draw(); return;
+  }
+});
 
-function onRadChange(v) {
-  const n = parseFloat(v);
-  if (!isNaN(n) && n > 0) { pushUndo(); radius = n; }
-  bestPos = null;
-  invalidateHeatmap();
-  draw();
-}
+canvas.addEventListener('pointerup', e=>{
+  if (isPan) { isPan=false; panStart=null; }
+  if (isZoneDrag&&zoneDrag) {
+    isZoneDrag=false;
+    const w=Math.abs(zoneDrag.cx-zoneDrag.wx), h=Math.abs(zoneDrag.cy-zoneDrag.wy);
+    if(w>1/zoom&&h>1/zoom){pushUndo();zones.push({x1:zoneDrag.wx,y1:zoneDrag.wy,x2:zoneDrag.cx,y2:zoneDrag.cy});bestPos=null;invalidateHeatmap();}
+    zoneDrag=null; draw(); return;
+  }
+  if (dragging) {
+    if(dragging.type==='radius'||dragging.type==='node') pushUndo();
+    dragging=null;
+  }
+});
 
-// --- Import / Export ---
-function ioStatus(msg, ok) {
-  const el = document.getElementById('io-status');
-  el.textContent = msg;
-  el.style.color = ok ? 'var(--accent)' : 'var(--danger)';
-  el.style.opacity = '1';
-  clearTimeout(el._t);
-  el._t = setTimeout(() => { el.style.opacity = '0'; }, 2500);
-}
+// Scroll to zoom
+canvas.addEventListener('wheel', e=>{
+  e.preventDefault();
+  const {x:sx, y:sy}=getScreen(e);
+  const factor=e.deltaY<0?1.12:0.89;
+  const wx=(sx-panX)/zoom, wy=(sy-panY)/zoom;
+  zoom*=factor;
+  panX=sx-wx*zoom; panY=sy-wy*zoom;
+  invalidateHeatmap(); draw();
+},{passive:false});
 
+// Keyboard shortcuts
+document.addEventListener('keydown', e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();undo();}
+});
+
+// ─── Export / Import ──────────────────────────────────────────────────────────
 function exportPath() {
-  const text = JSON.stringify(centeredCoords());
-  navigator.clipboard.writeText(text)
-    .then(() => ioStatus('Copied!', true))
-    .catch(() => {
-      // Fallback for browsers that block clipboard
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed'; ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      ioStatus('Copied!', true);
-    });
+  const coords=centeredCoords();
+  const txt=JSON.stringify(coords);
+  navigator.clipboard.writeText(txt).then(()=>flashStatus('io-status','copied!'));
 }
-
 function importPath() {
-  navigator.clipboard.readText()
-    .then(text => {
-      try {
-        const raw = JSON.parse(text);
-        if (!Array.isArray(raw) || raw.length < 2) throw new Error('Need at least 2 points');
-        const newPts = raw.map(p => {
-          if (!Array.isArray(p) || p.length < 2) throw new Error('Bad point');
-          return {x: p[0], y: p[1]};
-        });
-        pushUndo();
-        pts = newPts;
-        bestPos = null;
-        draw();
-        ioStatus(`Loaded ${pts.length} points`, true);
-      } catch(err) {
-        ioStatus('Invalid format', false);
-      }
-    })
-    .catch(() => ioStatus('Clipboard access denied', false));
+  navigator.clipboard.readText().then(txt=>{
+    try {
+      const arr=JSON.parse(txt);
+      if(!Array.isArray(arr)||arr.length<2) throw new Error('bad');
+      pushUndo();
+      pts=arr.map(p=>Array.isArray(p)?{x:p[0],y:p[1]}:{x:p.x,y:p.y});
+      bestPos=null; fitView(); invalidateHeatmap(); draw();
+      flashStatus('io-status','imported '+pts.length+' pts');
+    } catch(err){ flashStatus('io-status','parse error'); }
+  }).catch(()=>flashStatus('io-status','clipboard denied'));
+}
+function flashStatus(id, msg, dur=2000) {
+  const el=document.getElementById(id);
+  el.textContent=msg; el.style.opacity=1;
+  setTimeout(()=>{el.style.opacity=0;},dur);
 }
 
-// --- Presets ---
-const COOKIE_KEY = 'cpo_presets';
-
+// ─── Presets ──────────────────────────────────────────────────────────────────
 const BUILTIN_PRESETS = {
   'savannah': {
-    pts: [[-16,-7],[-5,-7],[-5,-27],[12,-27],[12,3],[1,3],[1,15],[-3,15],[-3,27],[17,27]].map(([x,y]) => ({x,y})),
-    zones: [], radius: 5,
-    circle: {x:-16, y:-7}
+    pts:[[-16,-7],[-5,-7],[-5,-27],[12,-27],[12,3],[1,3],[1,15],[-3,15],[-3,27],[17,27]].map(([x,y])=>({x,y})),
+    zones:[], radius:5, circle:{x:-16,y:-7}
   },
   'canyon': {
-    pts: [[-43,7],[-28,7],[-28,17],[-10,17],[-10,6],[-17,6],[-17,-10],[-2,-10],[-2,-16],[18,-16],[18,-13],[21,-13],[21,8],[43,8]].map(([x,y]) => ({x,y})),
-    zones: [], radius: 5,
-    circle: {x:-43, y:7}
+    pts:[[-43,7],[-28,7],[-28,17],[-10,17],[-10,6],[-17,6],[-17,-10],[-2,-10],[-2,-16],[18,-16],[18,-13],[21,-13],[21,8],[43,8]].map(([x,y])=>({x,y})),
+    zones:[], radius:5, circle:{x:-43,y:7}
   },
   'mars': {
-    pts: [[-2,-39],[-2,-26],[-13,-26],[-13,-3],[13,-3],[13,11],[-1,11],[-1,39]].map(([x,y]) => ({x,y})),
-    zones: [], radius: 5,
-    circle: {x:-2, y:-39}
+    pts:[[-2,-39],[-2,-26],[-13,-26],[-13,-3],[13,-3],[13,11],[-1,11],[-1,39]].map(([x,y])=>({x,y})),
+    zones:[], radius:5, circle:{x:-2,y:-39}
   },
   'way out': {
-    pts: [[4,-32],[14,-32],[14,1],[-1,1],[-1,-10],[-13,-10],[-13,19],[8,19],[8,33]].map(([x,y]) => ({x,y})),
-    zones: [], radius: 5,
-    circle: {x:4, y:-32}
+    pts:[[4,-32],[14,-32],[14,1],[-1,1],[-1,-10],[-13,-10],[-13,19],[8,19],[8,33]].map(([x,y])=>({x,y})),
+    zones:[], radius:5, circle:{x:4,y:-32}
   },
   'city': {
-    pts: [[2,-41],[2,-24],[17,-24],[17,-10],[-6,-10],[-6,-2],[-17,-2],[-17,15],[-2,15],[-2,41]].map(([x,y]) => ({x,y})),
-    zones: [], radius: 5,
-    circle: {x:2, y:-41}
+    pts:[[2,-41],[2,-24],[17,-24],[17,-10],[-6,-10],[-6,-2],[-17,-2],[-17,15],[-2,15],[-2,41]].map(([x,y])=>({x,y})),
+    zones:[], radius:5, circle:{x:2,y:-41}
   },
   'farm fields': {
-    pts: [[0,-43],[0,-13],[-14,-13],[-14,1],[14,1],[14,15],[0,15],[0,44]].map(([x,y]) => ({x,y})),
-    zones: [], radius: 5,
-    circle: {x:0, y:-43}
+    pts:[[0,-43],[0,-13],[-14,-13],[-14,1],[14,1],[14,15],[0,15],[0,44]].map(([x,y])=>({x,y})),
+    zones:[], radius:5, circle:{x:0,y:-43}
   },
   'grasslands': {
-    pts: [[16,-45],[16,-5],[-15,-5],[-15,45]].map(([x,y]) => ({x,y})),
-    zones: [], radius: 5,
-    circle: {x:16, y:-45}
+    pts:[[16,-45],[16,-5],[-15,-5],[-15,45]].map(([x,y])=>({x,y})),
+    zones:[], radius:5, circle:{x:16,y:-45}
   },
   'castle': {
-    pts: [[-1,-44],[-1,-28],[15,-28],[15,-11],[-1,-11],[-1,11],[-14,11],[-14,22],[-1,22],[-1,44]].map(([x,y]) => ({x,y})),
-    zones: [], radius: 5,
-    circle: {x:-1, y:-44}
+    pts:[[-1,-44],[-1,-28],[15,-28],[15,-11],[-1,-11],[-1,11],[-14,11],[-14,22],[-1,22],[-1,44]].map(([x,y])=>({x,y})),
+    zones:[], radius:5, circle:{x:-1,y:-44}
   },
   'midnight road': {
-    pts: [[2,-42],[2,-27],[17,-27],[17,-13],[-10,-13],[-10,-26],[-22,-26],[-22,0],[23,0],[23,16],[10,16],[10,11],[-10,11],[-10,26],[2,26],[2,42]].map(([x,y]) => ({x,y})),
-    zones: [], radius: 5,
-    circle: {x:2, y:-42}
+    pts:[[2,-42],[2,-27],[17,-27],[17,-13],[-10,-13],[-10,-26],[-22,-26],[-22,0],[23,0],[23,16],[10,16],[10,11],[-10,11],[-10,26],[2,26],[2,42]].map(([x,y])=>({x,y})),
+    zones:[], radius:5, circle:{x:2,y:-42}
   },
 };
 
-function getCookiePresets() {
-  try {
-    const match = document.cookie.split('; ').find(r => r.startsWith(COOKIE_KEY + '='));
-    if (!match) return {};
-    return JSON.parse(decodeURIComponent(match.split('=').slice(1).join('=')));
-  } catch { return {}; }
+function loadBuiltinPresets() {
+  let stored=[];
+  try { stored=JSON.parse(localStorage.getItem('rt-presets')||'[]'); } catch(e){}
+  return stored;
+}
+function saveStoredPresets(arr) {
+  try { localStorage.setItem('rt-presets',JSON.stringify(arr)); } catch(e){}
 }
 
-function setCookiePresets(obj) {
-  const val = encodeURIComponent(JSON.stringify(obj));
-  // 1 year expiry
-  const exp = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toUTCString();
-  document.cookie = `${COOKIE_KEY}=${val};expires=${exp};path=/;SameSite=Lax`;
-}
-
-function presetStatus(msg, ok) {
-  const el = document.getElementById('preset-status');
-  el.textContent = msg;
-  el.style.color = ok ? 'var(--accent)' : 'var(--danger)';
-  el.style.opacity = '1';
-  clearTimeout(el._t);
-  el._t = setTimeout(() => { el.style.opacity = '0'; }, 2500);
-}
-
-function savePreset() {
-  const nameEl = document.getElementById('preset-name');
-  const name = nameEl.value.trim();
-  if (!name) { presetStatus('Enter a name first', false); return; }
-  const presets = getCookiePresets();
-  const centered = centeredCoords();
-  const wa = worldArr();
-  const xs = wa.map(p => p.x), ys = wa.map(p => p.y);
-  const ox = (Math.min(...xs) + Math.max(...xs)) / 2;
-  const oy = (Math.min(...ys) + Math.max(...ys)) / 2;
-  presets[name] = {
-    pts: centered,
-    zones: zones.map(z => [z.x1 - ox, z.y1 - oy, z.x2 - ox, z.y2 - oy]),
-    radius,
-    circle: [Math.round(wcx() - ox), Math.round(wcy() - oy)]
-  };
-  setCookiePresets(presets);
-  nameEl.value = '';
-  renderPresets();
-  presetStatus(`Saved "${name}"`, true);
+function renderPresetList() {
+  const el=document.getElementById('preset-list');
+  el.innerHTML='';
+  // Builtin
+  for(const [name,data] of Object.entries(BUILTIN_PRESETS)) {
+    const item=document.createElement('div'); item.className='preset-item';
+    const sp=document.createElement('span'); sp.textContent=name;
+    sp.onclick=()=>loadPreset(name);
+    item.appendChild(sp);
+    el.appendChild(item);
+  }
+  // User
+  const stored=loadBuiltinPresets();
+  for(let i=0;i<stored.length;i++) {
+    const item=document.createElement('div'); item.className='preset-item';
+    const sp=document.createElement('span'); sp.textContent=stored[i].name;
+    sp.onclick=()=>loadUserPreset(i);
+    const del=document.createElement('button'); del.className='del-btn';
+    del.textContent='✕'; del.onclick=()=>deleteUserPreset(i);
+    item.appendChild(sp); item.appendChild(del);
+    el.appendChild(item);
+  }
 }
 
 function loadPreset(name) {
-  const presets = { ...BUILTIN_PRESETS, ...getCookiePresets() };
-  const p = presets[name];
-  if (!p) { presetStatus('Preset not found', false); return; }
-  try {
-    pushUndo();
-    pts = p.pts.map(pt => Array.isArray(pt) ? {x: pt[0], y: pt[1]} : {x: pt.x, y: pt.y});
-    zones = (p.zones || []).map(z => Array.isArray(z) ? {x1:z[0],y1:z[1],x2:z[2],y2:z[3]} : z);
-    if (p.circle) {
-      circle = Array.isArray(p.circle)
-        ? { x: p.circle[0], y: p.circle[1] }
-        : { x: p.circle.x, y: p.circle.y };
-    }
-    bestPos = null;
-    fitView();
-    draw();
-    presetStatus(`Loaded "${name}"`, true);
-  } catch(e) { presetStatus('Failed to load', false); }
+  const data=BUILTIN_PRESETS[name]; if(!data) return;
+  pts=data.pts.map(p=>({x:p.x,y:p.y}));
+  circle={...data.circle}; radius=data.radius||5;
+  zones=(data.zones||[]).map(z=>({...z})); bestPos=null; mustHitPoint=null;
+  fitView(); invalidateHeatmap(); draw();
+}
+function loadUserPreset(i) {
+  const stored=loadBuiltinPresets();
+  const data=stored[i]; if(!data) return;
+  pts=data.pts.map(p=>({x:p[0],y:p[1]}));
+  circle={...data.circle}; radius=data.radius||5;
+  zones=[]; bestPos=null; mustHitPoint=null;
+  fitView(); invalidateHeatmap(); draw();
+}
+function savePreset() {
+  const name=document.getElementById('preset-name').value.trim();
+  if(!name){flashStatus('preset-status','enter a name');return;}
+  const stored=loadBuiltinPresets();
+  stored.push({name, pts:pts.map(p=>[p.x,p.y]), circle:{...circle}, radius});
+  saveStoredPresets(stored);
+  document.getElementById('preset-name').value='';
+  renderPresetList(); flashStatus('preset-status','saved!');
+}
+function deleteUserPreset(i) {
+  const stored=loadBuiltinPresets();
+  stored.splice(i,1); saveStoredPresets(stored);
+  renderPresetList();
 }
 
-function deletePreset(name) {
-  const presets = getCookiePresets();
-  delete presets[name];
-  setCookiePresets(presets);
-  renderPresets();
-  presetStatus(`Deleted "${name}"`, true);
-}
-
-function presetPathLength(p) {
-  const pts2 = p.pts.map(pt => Array.isArray(pt) ? {x: pt[0], y: pt[1]} : {x: pt.x, y: pt.y});
-  let l = 0;
-  for (let i = 0; i < pts2.length - 1; i++) l += Math.hypot(pts2[i+1].x - pts2[i].x, pts2[i+1].y - pts2[i].y);
-  return l;
-}
-
-function renderPresets() {
-  const list = document.getElementById('preset-list');
-  const userPresets = getCookiePresets();
-  const allPresets = { ...BUILTIN_PRESETS, ...userPresets };
-  const isBuiltin = name => name in BUILTIN_PRESETS;
-
-  const sorted = Object.keys(allPresets).sort((a, b) =>
-    presetPathLength(allPresets[a]) - presetPathLength(allPresets[b])
-  );
-
-  let html = '';
-  for (const name of sorted) {
-    const builtin = isBuiltin(name);
-    const safeName = name.replace(/'/g, "\\'");
-    const len = presetPathLength(allPresets[name]).toFixed(1);
-    html += `<div class="preset-item">
-      <span title="${name} — length: ${len}" onclick="loadPreset('${safeName}')">▷ ${name}</span>
-      ${builtin
-        ? `<span style="font-size:9px;color:var(--text3);padding:0 4px;flex-shrink:0">built-in</span>`
-        : `<button onclick="deletePreset('${safeName}')">✕</button>`}
-    </div>`;
-  }
-  if (!html) html = '<p class="hint">No presets saved yet.</p>';
-  list.innerHTML = html;
-}
-
-// Allow Enter key to save preset
-document.getElementById('preset-name').addEventListener('keydown', e => {
-  if (e.key === 'Enter') savePreset();
-});
-
-// --- Sidebar resize ---
-(function() {
-  const handle = document.getElementById('sb-resize');
-  const sidebar = document.getElementById('sidebar');
-  const BASE_WIDTH = 220;
-  let resizing = false, startX = 0, startW = 0;
-
-  function setSidebarWidth(w) {
-    w = Math.max(140, Math.min(600, w));
-    sidebar.style.width = w + 'px';
-    // Remove old threshold classes
-    sidebar.classList.remove('sb-sm', 'sb-md', 'sb-lg', 'sb-xl');
-    if (w < 180)      sidebar.classList.add('sb-sm');
-    else if (w < 280) sidebar.classList.add('sb-md');
-    else if (w < 380) sidebar.classList.add('sb-lg');
-    else              sidebar.classList.add('sb-xl');
-  }
-
-  handle.addEventListener('mousedown', e => {
-    if (e.button !== 0) return;
-    resizing = true;
-    startX = e.clientX;
-    startW = sidebar.offsetWidth;
-    handle.classList.add('dragging');
-    document.body.style.cursor = 'ew-resize';
-    document.body.style.userSelect = 'none';
-    e.preventDefault();
-  });
-
-  window.addEventListener('mousemove', e => {
-    if (!resizing) return;
-    // Sidebar is on the right, dragging left = wider
-    const delta = startX - e.clientX;
-    setSidebarWidth(startW + delta);
-    // Trigger canvas resize to fill remaining space
-    resize();
-  });
-
-  window.addEventListener('mouseup', () => {
-    if (!resizing) return;
-    resizing = false;
-    handle.classList.remove('dragging');
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
-  });
-})();
-
-// Init
+// ─── Init ─────────────────────────────────────────────────────────────────────
+renderPresetList();
 resize();
-renderPresets();
 </script>
 </body>
 </html>
