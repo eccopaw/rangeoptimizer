@@ -78,7 +78,7 @@
 <body>
 <header>
   <h1>Range Optimization Testing</h1>
-  <p id="header-sub">find where a circle maximally intersects a rectilinear polyline</p>
+  <p id="header-sub">standard mode</p>
 </header>
 <div class="main">
   <div class="canvas-wrap"><canvas id="main"></canvas></div>
@@ -898,8 +898,8 @@ function setSensorMode(m) {
   document.getElementById('standard-stats').style.display=m==='standard'?'':'none';
   document.getElementById('orbital-stats').style.display=m==='orbital'?'':'none';
   document.getElementById('header-sub').textContent = m==='orbital'
-    ? 'find where a scout circle orbiting a fixed anchor maximally covers the track'
-    : 'find where a circle maximally intersects a rectilinear polyline';
+    ? 'aviator mode'
+    : 'standard mode';
   if (m!=='orbital') stopOrbitAnim();
   bestPos=null; invalidateHeatmap(); draw();
 }
