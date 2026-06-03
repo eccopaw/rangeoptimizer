@@ -73,6 +73,18 @@
   .text-input { width: 100%; padding: 4px 7px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 4px; color: var(--text); font-family: var(--mono); font-size: 11px; outline: none; }
   .text-input:focus { border-color: var(--accent2); }
   .musthit-btn.active { background: rgba(255,200,60,0.12); border-color: #ffc83c; color: #ffc83c; }
+
+  /* ── Simulation ── */
+  .sim-panel { background: var(--surface); }
+  .sim-active header { border-bottom-color: rgba(255,160,40,0.4); }
+  .tower-item { display:flex; align-items:center; gap:4px; background:var(--surface2); border:1px solid var(--border); border-radius:4px; padding:3px 6px; margin-bottom:4px; font-family:var(--mono); font-size:10px; color:var(--text2); cursor:pointer; }
+  .tower-item:hover { border-color:var(--accent2); }
+  .tower-item.selected { border-color:var(--accent2); background:rgba(74,180,240,0.10); color:var(--text); }
+  .tower-item .t-icon { font-size:13px; flex-shrink:0; }
+  .tower-item .t-name { flex:1; }
+  .tower-item .t-del { padding:1px 5px; font-size:9px; margin-bottom:0; width:auto; flex-shrink:0; }
+  .stat-bar { width:100%; height:4px; background:var(--surface2); border-radius:2px; margin-top:2px; overflow:hidden; }
+  .stat-bar-fill { height:100%; border-radius:2px; transition:width 0.1s; }
 </style>
 </head>
 <body>
@@ -93,12 +105,12 @@
         <button class="mode-btn" id="btn-del" onclick="setMode('del')">Del</button>
       </div>
       <div class="mode-row">
-        <button class="mode-btn" id="btn-zone" onclick="setMode('zone')" style="border-color:rgba(240,74,106,0.5);color:#f04a6a">⬛ Zone</button>
+        <button class="mode-btn" id="btn-zone" onclick="setMode('zone')" style="border-color:rgba(240,74,106,0.5);color:#f04a6a">Zone</button>
         <button class="mode-btn" id="btn-zonedel" onclick="setMode('zonedel')" style="border-color:rgba(240,74,106,0.3);color:#c03050">✕ Erase</button>
         <button class="mode-btn danger" onclick="clearZones()" style="flex:0.7;margin-bottom:0">All</button>
       </div>
       <div class="mode-row">
-        <button class="mode-btn musthit-btn" id="btn-musthit" onclick="setMode('musthit')" style="border-color:rgba(255,200,60,0.5);color:#ffc83c">◎ Must Hit</button>
+        <button class="mode-btn musthit-btn" id="btn-musthit" onclick="setMode('musthit')" style="border-color:rgba(255,200,60,0.5);color:#ffc83c">Must Hit</button>
         <button class="mode-btn danger" id="btn-clearmh" onclick="clearMustHit()" style="flex:0.7;margin-bottom:0;border-color:rgba(255,200,60,0.4);color:#c09020">✕ Clear</button>
       </div>
       <p class="hint">Move: drag circle/pts · Add: click path · Del: click node · Zone: drag exclusion · <b>Must Hit</b>: click to place required point · <b>Ctrl+Z</b> undo <span id="undo-count" style="color:var(--text3)"></span></p>
@@ -142,7 +154,7 @@
             <label><span>Speed</span><span id="speed-label">1.0x</span></label>
             <input type="range" id="orbit-speed" min="0.1" max="5" step="0.1" value="1" oninput="onSpeedChange(this.value)">
           </div>
-          <button class="purple-btn" id="btn-anim" onclick="toggleAnimation()">▶ Animate</button>
+          <button class="purple-btn" id="btn-anim" onclick="toggleAnimation()">Animate</button>
         </div>
       </div>
     </div>
@@ -172,14 +184,14 @@
     <!-- OPTIMIZE -->
     <div class="panel">
       <div class="panel-label">Optimize</div>
-      <button class="primary" onclick="findBest()">▶ Find best position</button>
+      <button class="primary" onclick="findBest()">Find best position</button>
       <button onclick="resetPath()">Reset path</button>
     </div>
 
     <!-- VISUALIZE -->
     <div class="panel">
       <div class="panel-label">Visualize</div>
-      <button id="btn-heatmap" onclick="toggleHeatmap()" style="border-color:rgba(74,240,176,0.35);color:var(--text2)">⬛ Heatmap: Off</button>
+      <button id="btn-heatmap" onclick="toggleHeatmap()" style="border-color:rgba(74,240,176,0.35);color:var(--text2)">Heatmap: Off</button>
       <p class="hint">Green=best valid · Red=worst. Banned zones shown dark. Must-hit constraint applied.</p>
     </div>
 
@@ -197,10 +209,79 @@
     <!-- IMPORT / EXPORT -->
     <div class="panel">
       <div class="panel-label">Import / Export</div>
-      <button onclick="exportPath()">⎘ Copy path</button>
-      <button onclick="importPath()">⎗ Paste path</button>
+      <button onclick="exportPath()">Copy path</button>
+      <button onclick="importPath()">Paste path</button>
       <p class="hint" style="color:var(--text3);margin-bottom:2px">Coords centered at (0,0) on export</p>
       <p class="hint" id="io-status" style="min-height:13px;transition:opacity 0.4s"></p>
+    </div>
+
+    <!-- SIMULATION -->
+    <div class="panel sim-panel">
+      <div class="panel-label">Simulation</div>
+
+      <!-- Tower placement -->
+      <div style="margin-bottom:6px">
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:4px">Place tower:</div>
+        <div class="mode-row">
+          <button class="mode-btn" id="btn-tower-single" onclick="startPlaceTower('single')" style="border-color:rgba(74,180,240,0.5);color:var(--accent2)">Single</button>
+          <button class="mode-btn" id="btn-tower-aoe" onclick="startPlaceTower('aoe')" style="border-color:rgba(192,132,252,0.5);color:var(--orbital)">AoE</button>
+          <button class="mode-btn danger" onclick="clearTowers()" style="flex:0.6;margin-bottom:0">✕ All</button>
+        </div>
+      </div>
+
+      <!-- Selected tower stats editor -->
+      <div id="tower-editor" style="display:none;margin-bottom:6px;border:1px solid var(--border2);border-radius:4px;padding:6px;font-family:var(--mono);font-size:10px">
+        <div style="color:var(--text2);margin-bottom:5px" id="tower-editor-title">Tower</div>
+        <div class="stat-row"><span class="stat-label">Damage/s</span>
+          <input type="number" class="inline-num" id="te-dps" min="0" step="100" value="1000" oninput="updateSelectedTower()">
+        </div>
+        <div class="stat-row"><span class="stat-label">Range</span>
+          <input type="number" class="inline-num" id="te-range" min="0.1" step="0.5" value="10" oninput="updateSelectedTower()">
+        </div>
+      </div>
+
+      <!-- Towers list -->
+      <div id="tower-list" style="max-height:100px;overflow-y:auto;margin-bottom:6px"></div>
+
+      <!-- Enemy settings -->
+      <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:4px">Enemy settings:</div>
+      <div class="stat-row"><span class="stat-label">HP</span>
+        <input type="number" class="inline-num" id="sim-hp" value="125000" min="1" step="1000">
+      </div>
+      <div class="stat-row"><span class="stat-label">Speed (studs/s)</span>
+        <input type="number" class="inline-num" id="sim-speed" value="0.783" min="0.01" step="0.1">
+      </div>
+      <div class="slider-row">
+        <label><span>Sim speed</span><input type="number" class="inline-num" id="sim-mult-num" value="1" min="0.1" max="100" step="0.5" oninput="document.getElementById('sim-mult').value=Math.min(this.value,parseFloat(document.getElementById('sim-mult').max));document.getElementById('sim-mult').dispatchEvent(new Event('input'))"></label>
+        <input type="range" id="sim-mult" min="0.1" max="50" step="0.1" value="1" oninput="document.getElementById('sim-mult-num').value=parseFloat(this.value).toFixed(1)">
+      </div>
+      <div class="stat-row"><span class="stat-label">Groups</span>
+        <input type="number" class="inline-num" id="sim-groups" value="14" min="1" step="1">
+      </div>
+      <div class="stat-row"><span class="stat-label">Per group (min-max)</span></div>
+      <div class="stat-row" style="gap:4px">
+        <input type="number" class="inline-num" id="sim-gmin" value="4" min="1" step="1" style="width:46px">
+        <span style="color:var(--text3);font-size:10px;font-family:var(--mono)">–</span>
+        <input type="number" class="inline-num" id="sim-gmax" value="6" min="1" step="1" style="width:46px">
+      </div>
+      <div class="stat-row"><span class="stat-label">In-group gap (s)</span></div>
+      <div class="stat-row" style="gap:4px">
+        <input type="number" class="inline-num" id="sim-smin" value="3" min="0.1" step="0.5" style="width:46px">
+        <span style="color:var(--text3);font-size:10px;font-family:var(--mono)">–</span>
+        <input type="number" class="inline-num" id="sim-smax" value="5" min="0.1" step="0.5" style="width:46px">
+      </div>
+      <div class="stat-row"><span class="stat-label">Group gap (s)</span></div>
+      <div class="stat-row" style="gap:4px">
+        <input type="number" class="inline-num" id="sim-gapmin" value="5" min="0.1" step="0.5" style="width:46px">
+        <span style="color:var(--text3);font-size:10px;font-family:var(--mono)">–</span>
+        <input type="number" class="inline-num" id="sim-gapmax" value="10" min="0.1" step="0.5" style="width:46px">
+      </div>
+      <div style="margin-top:6px">
+        <button class="primary" id="btn-sim-start" onclick="startSimulation()">Start Simulation</button>
+        <button id="btn-sim-stop" onclick="stopSimulation()" style="display:none;border-color:var(--danger);color:var(--danger)">Stop</button>
+      </div>
+      <div class="stat-row" style="margin-top:5px"><span class="stat-label">Enemies alive</span><span class="stat-value accent" id="sim-alive">—</span></div>
+      <div class="stat-row"><span class="stat-label">Enemies killed</span><span class="stat-value warn" id="sim-killed">—</span></div>
     </div>
 
   </div>
@@ -240,6 +321,19 @@ window.addEventListener('resize', resize);
 let pts = [];
 let circle = {x: 0, y: 0};
 let radius = 5;
+let pathArcCache = null;
+// Simulation state
+let towers = [];
+let selectedTower = null;
+let placingTower = null;
+let nextTowerId = 1;
+let simRunning = false;
+let simAnimFrame = null;
+let simLastTime = null;
+let simEnemies = [];
+let simSpawnQueue = [];
+let simKilled = 0;
+let simTime = 0;
 let anchorRadius = 14, scoutRadius = 6;
 let sensorMode = 'standard';
 let bestPos = null;
@@ -503,8 +597,8 @@ function startHeatmapJob() {
         const x0=col*CELL, y0=row*CELL, x1=Math.min(x0+CELL,PW), y1=Math.min(y0+CELL,PH);
         let rr, gg, bb, alpha;
         if (!validMask[idx2]) {
-          // Banned / must-hit fail: dark overlay
-          rr = 20; gg = 20; bb = 25; alpha = 120;
+          // Banned / must-hit fail: render as red
+          rr = 200; gg = 30; bb = 30; alpha = 150;
         } else {
           const t = (ovValues[idx2]-minOv)/range;
           [rr,gg,bb,alpha] = heatmapColor(t);
@@ -529,6 +623,7 @@ function startHeatmapJob() {
 }
 
 function invalidateHeatmap() {
+  pathArcCache = null;
   heatmapDirty = true;
   heatmapImageData = null;
   if (heatmapJob) { heatmapJob.cancelled = true; heatmapJob = null; }
@@ -552,8 +647,8 @@ function renderHeatmap() {
 function toggleHeatmap() {
   heatmapOn = !heatmapOn; heatmapDirty = true;
   const btn = document.getElementById('btn-heatmap');
-  if (heatmapOn) { btn.textContent='⬛ Heatmap: On'; btn.style.borderColor='var(--accent)'; btn.style.color='var(--accent)'; }
-  else { btn.textContent='⬛ Heatmap: Off'; btn.style.borderColor='rgba(74,240,176,0.35)'; btn.style.color='var(--text2)'; }
+  if (heatmapOn) { btn.textContent='Heatmap: On'; btn.style.borderColor='var(--accent)'; btn.style.color='var(--accent)'; }
+  else { btn.textContent='Heatmap: Off'; btn.style.borderColor='rgba(74,240,176,0.35)'; btn.style.color='var(--text2)'; }
   draw();
 }
 
@@ -653,6 +748,8 @@ function draw() {
 
   if (sensorMode==='orbital') drawOrbital(ap, wa, ocx, ocy, wox, woy);
   else drawStandard(ap, wa, ocx, ocy, wox, woy);
+
+  drawSimulation();
 }
 
 function drawPolyline(ap, wa) {
@@ -754,13 +851,13 @@ function drawStandard(ap, wa, ocx, ocy, wox, woy) {
   const pl=pathLength(), pct=pl>0?(ov/pl*100):0;
   ctx.font='400 11px IBM Plex Mono,monospace'; ctx.fillStyle='#ffffff';
   ctx.fillText('range='+radius.toFixed(1), lx, ly);
-  ctx.fillStyle='#ffffff'; ctx.fillText('coverage='+ov.toFixed(1)+' units', lx, ly+14);
+  ctx.fillStyle='#ffffff'; ctx.fillText('coverage='+ov.toFixed(1)+' studs', lx, ly+14);
   ctx.fillStyle='#ffffff'; ctx.fillText(pct.toFixed(1)+'% covered', lx, ly+28);
 
   // Stats
   document.getElementById('pos-display').textContent = Math.round(wox)+', '+Math.round(woy);
-  document.getElementById('ov').textContent = ov.toFixed(1)+' units';
-  document.getElementById('plen').textContent = Math.round(pl)+' units';
+  document.getElementById('ov').textContent = ov.toFixed(1)+' studs';
+  document.getElementById('plen').textContent = Math.round(pl)+' studs';
   document.getElementById('pct').textContent = pl>0?(ov/pl*100).toFixed(1)+'%':'—';
   document.getElementById('undo-count').textContent = undoStack.length?`(${undoStack.length})`:'';
   document.getElementById('musthit-status').textContent = mustHitPoint
@@ -846,7 +943,7 @@ function drawOrbital(ap, wa, ocx, ocy, wox, woy) {
   document.getElementById('pos-display').textContent = Math.round(wox)+', '+Math.round(woy);
   document.getElementById('orb-cov').textContent = res.coverage.toFixed(1)+'%';
   document.getElementById('orb-score').textContent = res.score.toFixed(3);
-  document.getElementById('orb-plen').textContent = Math.round(pathLength())+' units';
+  document.getElementById('orb-plen').textContent = Math.round(pathLength())+' studs';
   document.getElementById('orb-angle').textContent = angleDeg.toFixed(0)+'deg';
   document.getElementById('undo-count').textContent = undoStack.length?`(${undoStack.length})`:'';
   document.getElementById('musthit-status').textContent = mustHitPoint
@@ -873,7 +970,7 @@ function startOrbitAnim() {
 function stopOrbitAnim() {
   orbitAnimating=false;
   if (orbitAnimId) cancelAnimationFrame(orbitAnimId);
-  document.getElementById('btn-anim').textContent='▶ Animate';
+  document.getElementById('btn-anim').textContent='Animate';
   document.getElementById('btn-anim').classList.remove('active');
 }
 function toggleAnimation() { if (orbitAnimating) stopOrbitAnim(); else startOrbitAnim(); }
@@ -1132,7 +1229,7 @@ function findBest() {
     if(optimizerCancel || runToken !== token) return; // cancelled
     if(taskIdx >= tasks.length) {
       // Done
-      btn.textContent = '▶ Find best position';
+      btn.textContent = 'Find best position';
       btn.disabled = false;
       bestPos = {x:bx, y:by, ov:best};
       const startX=circle.x, startY=circle.y;
@@ -1274,11 +1371,14 @@ canvas.addEventListener('pointerdown', e=>{
     const distToLast=Math.hypot(wx-wa[wa.length-1].x,wy-wa[wa.length-1].y);
     const seg=hitSegment(wx,wy);
     pushUndo();
-    if(distToFirst<8/zoom){pts.unshift({x:wx,y:wy});}
-    else if(distToLast<8/zoom){pts.push({x:wx,y:wy});}
-    else if(seg){pts.splice(seg.seg+1,0,{x:seg.px,y:seg.py});}
-    else if(distToFirst<distToLast){pts.unshift({x:wx,y:wy});}
-    else{pts.push({x:wx,y:wy});}
+    let newIdx;
+    if(distToFirst<8/zoom){pts.unshift({x:wx,y:wy}); newIdx=0;}
+    else if(distToLast<8/zoom){pts.push({x:wx,y:wy}); newIdx=pts.length-1;}
+    else if(seg){const snapped=snapGrid(seg.px,seg.py); pts.splice(seg.seg+1,0,{x:snapped.x,y:snapped.y}); newIdx=seg.seg+1;}
+    else if(distToFirst<distToLast){pts.unshift({x:wx,y:wy}); newIdx=0;}
+    else{pts.push({x:wx,y:wy}); newIdx=pts.length-1;}
+    // Immediately start dragging the new point
+    dragging={type:'node', idx:newIdx, offX:0, offY:0};
     bestPos=null; invalidateHeatmap(); draw(); return;
   }
   if (mode==='move') {
@@ -1486,6 +1586,347 @@ function deleteUserPreset(i) {
 // ─── Init ─────────────────────────────────────────────────────────────────────
 renderPresetList();
 resize();
+// ─── Simulation ───────────────────────────────────────────────────────────────
+
+// Path arc-length cache (declared at top of state)
+
+function getPathArc() {
+  const wa = worldArr();
+  if (pathArcCache && pathArcCache.pts === wa.length) return pathArcCache;
+  const segs = [];
+  let cum = 0;
+  for (let i = 0; i < wa.length - 1; i++) {
+    const len = Math.hypot(wa[i+1].x - wa[i].x, wa[i+1].y - wa[i].y);
+    segs.push({ p1: wa[i], p2: wa[i+1], len, start: cum });
+    cum += len;
+  }
+  pathArcCache = { segs, total: cum, pts: wa.length };
+  return pathArcCache;
+}
+
+function posAtDist(d) {
+  const arc = getPathArc();
+  if (arc.total <= 0) return { x: 0, y: 0 };
+  d = Math.max(0, Math.min(d, arc.total));
+  for (let i = arc.segs.length - 1; i >= 0; i--) {
+    const s = arc.segs[i];
+    if (d >= s.start) {
+      const t = Math.min((d - s.start) / Math.max(s.len, 0.0001), 1);
+      return { x: s.p1.x + (s.p2.x - s.p1.x) * t, y: s.p1.y + (s.p2.y - s.p1.y) * t };
+    }
+  }
+  return arc.segs[0].p1;
+}
+
+function buildSpawnQueue() {
+  const groups = parseInt(document.getElementById('sim-groups').value) || 14;
+  const gmin = parseInt(document.getElementById('sim-gmin').value) || 4;
+  const gmax = parseInt(document.getElementById('sim-gmax').value) || 6;
+  const smin = parseFloat(document.getElementById('sim-smin').value) || 3;
+  const smax = parseFloat(document.getElementById('sim-smax').value) || 5;
+  const gapmin = parseFloat(document.getElementById('sim-gapmin').value) || 5;
+  const gapmax = parseFloat(document.getElementById('sim-gapmax').value) || 10;
+
+  const queue = [];
+  let t = 0;
+  for (let g = 0; g < groups; g++) {
+    const count = gmin + Math.floor(Math.random() * (gmax - gmin + 1));
+    const spacing = smin + Math.random() * (smax - smin);
+    for (let e = 0; e < count; e++) {
+      queue.push({ spawnAt: t });
+      t += spacing;
+    }
+    t += gapmin + Math.random() * (gapmax - gapmin);
+  }
+  return queue;
+}
+
+function startSimulation() {
+  if (simRunning) stopSimulation();
+  pathArcCache = null; // rebuild
+  const arc = getPathArc();
+  if (arc.total < 0.01 || pts.length < 2) { alert('Need at least 2 path points'); return; }
+
+  simRunning = true;
+  simTime = 0;
+  simLastTime = null;
+  simKilled = 0;
+  simEnemies = [];
+  simSpawnQueue = buildSpawnQueue();
+
+  document.getElementById('btn-sim-start').style.display = 'none';
+  document.getElementById('btn-sim-stop').style.display = '';
+  document.body.classList.add('sim-active');
+
+  simAnimFrame = requestAnimationFrame(simTick);
+}
+
+function stopSimulation() {
+  simRunning = false;
+  if (simAnimFrame) { cancelAnimationFrame(simAnimFrame); simAnimFrame = null; }
+  document.getElementById('btn-sim-start').style.display = '';
+  document.getElementById('btn-sim-stop').style.display = 'none';
+  document.body.classList.remove('sim-active');
+  simEnemies = [];
+  simSpawnQueue = [];
+  updateSimStats();
+  draw();
+}
+
+function simTick(ts) {
+  if (!simRunning) return;
+  if (simLastTime === null) simLastTime = ts;
+  const dt = Math.min((ts - simLastTime) / 1000, 0.05); // cap at 50ms
+  simLastTime = ts;
+  const mult = parseFloat(document.getElementById('sim-mult').value) || 1;
+  const dtScaled = dt * mult;
+  simTime += dtScaled;
+
+  const hp = parseFloat(document.getElementById('sim-hp').value) || 125000;
+  const speed = parseFloat(document.getElementById('sim-speed').value) || (47/60);
+
+  // Spawn
+  while (simSpawnQueue.length && simSpawnQueue[0].spawnAt <= simTime) {
+    simSpawnQueue.shift();
+    simEnemies.push({ id: nextTowerId++, dist: 0, hp, maxHp: hp });
+  }
+
+  // Move enemies
+  for (const e of simEnemies) e.dist += speed * dtScaled;
+
+  // Tower damage
+  for (const e of simEnemies) {
+    const pos = posAtDist(e.dist);
+    for (const t of towers) {
+      const d = Math.hypot(pos.x - t.x, pos.y - t.y);
+      if (d <= t.range) {
+        if (t.type === 'single') {
+          // Single: full DPS to nearest only — handled below
+        } else {
+          // AoE: DPS to all in range
+          e.hp -= t.dps * dtScaled;
+        }
+      }
+    }
+  }
+  // Single-target: find furthest-travelled enemy in range per tower
+  for (const t of towers) {
+    if (t.type !== 'single') continue;
+    let furthest = null, furthestDist = -Infinity;
+    for (const e of simEnemies) {
+      const pos = posAtDist(e.dist);
+      const d = Math.hypot(pos.x - t.x, pos.y - t.y);
+      if (d <= t.range && e.dist > furthestDist) { furthest = e; furthestDist = e.dist; }
+    }
+    if (furthest) furthest.hp -= t.dps * dtScaled;
+  }
+
+  // Remove dead or finished
+  const arc = getPathArc();
+  const before = simEnemies.length;
+  simEnemies = simEnemies.filter(e => e.hp > 0 && e.dist < arc.total);
+  simKilled += before - simEnemies.length;
+
+  updateSimStats();
+  draw();
+
+  // End when all done
+  if (simEnemies.length === 0 && simSpawnQueue.length === 0 && simTime > 1) {
+    stopSimulation();
+    return;
+  }
+
+  simAnimFrame = requestAnimationFrame(simTick);
+}
+
+function updateSimStats() {
+  document.getElementById('sim-alive').textContent = simEnemies.length;
+  document.getElementById('sim-killed').textContent = simKilled;
+}
+
+// ── Tower placement ──────────────────────────────────────────────────────────
+function startPlaceTower(type) {
+  placingTower = type;
+  canvas.style.cursor = 'crosshair';
+  selectedTower = null;
+  renderTowerEditor();
+  document.getElementById('btn-tower-single').classList.toggle('active', type === 'single');
+  document.getElementById('btn-tower-aoe').classList.toggle('active', type === 'aoe');
+}
+
+function clearTowers() {
+  towers = [];
+  selectedTower = null;
+  placingTower = null;
+  renderTowerList();
+  renderTowerEditor();
+  document.getElementById('btn-tower-single').classList.remove('active');
+  document.getElementById('btn-tower-aoe').classList.remove('active');
+  draw();
+}
+
+function selectTower(id) {
+  selectedTower = id;
+  renderTowerEditor();
+  renderTowerList();
+}
+
+function updateSelectedTower() {
+  if (!selectedTower) return;
+  const t = towers.find(t => t.id === selectedTower);
+  if (!t) return;
+  t.dps = parseFloat(document.getElementById('te-dps').value) || 1000;
+  t.range = parseFloat(document.getElementById('te-range').value) || 10;
+  draw();
+}
+
+function deleteTower(id) {
+  towers = towers.filter(t => t.id !== id);
+  if (selectedTower === id) { selectedTower = null; renderTowerEditor(); }
+  renderTowerList();
+  draw();
+}
+
+function renderTowerEditor() {
+  const ed = document.getElementById('tower-editor');
+  const t = towers.find(t => t.id === selectedTower);
+  if (!t) { ed.style.display = 'none'; return; }
+  ed.style.display = '';
+  document.getElementById('tower-editor-title').textContent =
+    (t.type === 'single' ? 'Single' : 'AoE') + ` #${t.id}`;
+  document.getElementById('te-dps').value = t.dps;
+  document.getElementById('te-range').value = t.range;
+}
+
+function renderTowerList() {
+  const el = document.getElementById('tower-list');
+  if (!towers.length) { el.innerHTML = '<p style="font-size:10px;color:var(--text3);font-family:var(--mono)">No towers placed.</p>'; return; }
+  el.innerHTML = towers.map(t => `
+    <div class="tower-item ${t.id === selectedTower ? 'selected' : ''}" onclick="selectTower(${t.id})">
+      <span class="t-icon">${t.type === 'single' ? '[S]' : '[A]'}</span>
+      <span class="t-name">${t.type === 'single' ? 'Single' : 'AoE'} #${t.id}<br>
+        <span style="color:var(--text3)">${t.dps} dps · r=${t.range}</span>
+      </span>
+      <button class="t-del danger" onclick="event.stopPropagation();deleteTower(${t.id})">✕</button>
+    </div>`).join('');
+}
+
+// ── Draw towers & enemies ────────────────────────────────────────────────────
+function drawSimulation() {
+  const arc = getPathArc();
+
+  // Draw towers
+  for (const t of towers) {
+    const s = toScreen(t.x, t.y);
+    const rPx = t.range * zoom;
+    const isSel = t.id === selectedTower;
+    const col = t.type === 'single' ? '#4ab4f0' : '#c084fc';
+
+    // Range circle
+    ctx.beginPath(); ctx.arc(s.x, s.y, rPx, 0, Math.PI*2);
+    ctx.fillStyle = t.type === 'single' ? 'rgba(74,180,240,0.06)' : 'rgba(192,132,252,0.06)';
+    ctx.fill();
+    ctx.strokeStyle = isSel ? col : col.replace(')', ',0.45)').replace('rgb', 'rgba');
+    ctx.lineWidth = isSel ? 1.5 : 1;
+    ctx.setLineDash(isSel ? [] : [3,3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Tower body
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(s.x, s.y, isSel ? 5 : 4, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = isSel ? '#fff' : 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Placing tower preview (follow mouse)
+  if (placingTower && simMouseWorld) {
+    const s = toScreen(simMouseWorld.x, simMouseWorld.y);
+    const defRange = parseFloat(document.getElementById('te-range').value) || 10;
+    const rPx = defRange * zoom;
+    const col = placingTower === 'single' ? '#4ab4f0' : '#c084fc';
+    ctx.beginPath(); ctx.arc(s.x, s.y, rPx, 0, Math.PI*2);
+    ctx.fillStyle = placingTower === 'single' ? 'rgba(74,180,240,0.10)' : 'rgba(192,132,252,0.10)';
+    ctx.fill();
+    ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.setLineDash([4,3]);
+    ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Draw enemies
+  for (const e of simEnemies) {
+    const pos = posAtDist(e.dist);
+    const s = toScreen(pos.x, pos.y);
+    const pct = Math.max(0, e.hp / e.maxHp);
+    const r = Math.max(2, 2.5 * zoom);
+
+    // Shadow
+    ctx.beginPath(); ctx.arc(s.x, s.y, r + 1, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fill();
+
+    // Body gradient based on HP
+    const hue = pct * 120; // green→red
+    ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, Math.PI*2);
+    ctx.fillStyle = `hsl(${hue},90%,55%)`; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 0.8; ctx.stroke();
+
+    // Health bar
+    const bw = Math.max(14, r * 3.5);
+    const bh = 2;
+    const bx = s.x - bw/2, by = s.y - r - 5;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.fillStyle = `hsl(${hue},80%,50%)`;
+    ctx.fillRect(bx, by, bw * pct, bh);
+
+    // HP label
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.font = `${Math.max(7, Math.min(9, zoom*7))}px IBM Plex Mono, monospace`;
+    ctx.textAlign = 'center';
+    const hpStr = e.hp >= 1000 ? (e.hp/1000).toFixed(1)+'k' : Math.ceil(e.hp).toString();
+    ctx.fillText(hpStr, s.x, by - 1);
+    ctx.textAlign = 'left';
+  }
+}
+
+
+// Intercept pointer events for tower placement and simulation
+const _origPointerDown = canvas.onpointerdown;
+canvas.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
+  if (placingTower) {
+    const {x, y} = getLogical(e);
+    const defDps = parseFloat(document.getElementById('te-dps').value) || 1000;
+    const defRange = parseFloat(document.getElementById('te-range').value) || 10;
+    const id = nextTowerId++;
+    towers.push({ id, type: placingTower, x, y, dps: defDps, range: defRange });
+    selectedTower = id;
+    placingTower = null;
+    document.getElementById('btn-tower-single').classList.remove('active');
+    document.getElementById('btn-tower-aoe').classList.remove('active');
+    canvas.style.cursor = 'crosshair';
+    renderTowerList();
+    renderTowerEditor();
+    draw();
+    return;
+  }
+  // Click on existing tower to select
+  const {x, y} = getLogical(e);
+  for (const t of towers) {
+    if (Math.hypot(x - t.x, y - t.y) < 6 / zoom) {
+      selectTower(t.id); draw(); return;
+    }
+  }
+}, true); // capture phase so it runs before other handlers
+
+canvas.addEventListener('pointermove', e => {
+  simMouseWorld = getLogical(e);
+  if (placingTower) draw();
+}, true);
+
+renderTowerList();
 </script>
 </body>
 </html>
