@@ -186,6 +186,18 @@
       <div class="panel-label">Optimize</div>
       <button class="primary" onclick="findBest()">Find best position</button>
       <button onclick="resetPath()">Reset path</button>
+      <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin:8px 0 4px">Multi-tower placement:</div>
+      <div class="stat-row"><span class="stat-label">Towers to place</span>
+        <input type="number" class="inline-num" id="mt-count" value="3" min="1" max="50" step="1">
+      </div>
+      <div class="stat-row"><span class="stat-label">Exclusion box (studs)</span>
+        <input type="number" class="inline-num" id="mt-excl" value="5" min="1" step="1">
+      </div>
+      <div class="stat-row"><span class="stat-label">Track buffer (studs)</span>
+        <input type="number" class="inline-num" id="mt-buffer" value="2" min="0" step="0.5">
+      </div>
+      <button id="btn-mt" class="primary" onclick="findMultiTower()">Find multi-tower</button>
+      <div id="mt-results" style="font-family:var(--mono);font-size:10px;color:var(--text2);margin-top:4px;max-height:120px;overflow-y:auto"></div>
     </div>
 
     <!-- VISUALIZE -->
@@ -242,6 +254,25 @@
 
       <!-- Towers list -->
       <div id="tower-list" style="max-height:100px;overflow-y:auto;margin-bottom:6px"></div>
+
+      <!-- Zed settings -->
+      <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin:6px 0 4px">Zed (counter-unit):</div>
+      <div class="stat-row"><span class="stat-label">Enable Zed</span>
+        <input type="checkbox" id="zed-enabled" style="accent-color:var(--accent)">
+      </div>
+      <div class="stat-row"><span class="stat-label">Quantity</span>
+        <input type="number" class="inline-num" id="zed-qty" value="1" min="1" step="1">
+      </div>
+      <div class="stat-row"><span class="stat-label">Micro timer (s)</span>
+        <input type="number" class="inline-num" id="zed-micro" value="10" min="0.5" step="0.5">
+      </div>
+      <div class="stat-row"><span class="stat-label">Speed (studs/s)</span>
+        <input type="number" class="inline-num" id="zed-speed" value="3" min="0.1" step="0.1">
+      </div>
+      <div class="stat-row"><span class="stat-label">Firerate buff</span>
+        <input type="checkbox" id="zed-fr-buff" style="accent-color:var(--accent)">
+        <span style="font-size:9px;color:var(--text3);font-family:var(--mono)">+100% fire / +250% splash</span>
+      </div>
 
       <!-- Enemy settings -->
       <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:4px">Enemy settings:</div>
@@ -334,6 +365,20 @@ let simEnemies = [];
 let simSpawnQueue = [];
 let simKilled = 0;
 let simTime = 0;
+let multiTowerResults = [];
+let mtCancelToken = { cancelled: false };
+
+// Zed state
+const ZED_LEVELS = [
+  { level:1, hp:420,   dmgSingle:4, dmgSplash:null, firerate:0.133, splashCD:null, splashR:null, range:19 },
+  { level:4, hp:2200,  dmgSingle:4, dmgSplash:15,   firerate:0.066, splashCD:2.1,  splashR:6.25, range:32 },
+  { level:5, hp:6000,  dmgSingle:8, dmgSplash:40,   firerate:0.066, splashCD:1.05, splashR:7,    range:35 },
+];
+const ZED_MICRO_OFFSETS = [0, 0.5, 1.5];
+let zedUnits = [];
+let zedMicroQueue = [];
+let zedNextMicroAt = 0;
+let zedMicroReadyAfter = 0; // time when all zeds of last micro died
 let anchorRadius = 14, scoutRadius = 6;
 let sensorMode = 'standard';
 let bestPos = null;
@@ -624,6 +669,7 @@ function startHeatmapJob() {
 
 function invalidateHeatmap() {
   pathArcCache = null;
+  if (typeof multiTowerResults !== 'undefined') multiTowerResults = [];
   heatmapDirty = true;
   heatmapImageData = null;
   if (heatmapJob) { heatmapJob.cancelled = true; heatmapJob = null; }
@@ -749,6 +795,7 @@ function draw() {
   if (sensorMode==='orbital') drawOrbital(ap, wa, ocx, ocy, wox, woy);
   else drawStandard(ap, wa, ocx, ocy, wox, woy);
 
+  drawMultiTowerResults();
   drawSimulation();
 }
 
@@ -1556,7 +1603,7 @@ function renderPresetList() {
 function loadPreset(name) {
   const data=BUILTIN_PRESETS[name]; if(!data) return;
   pts=data.pts.map(p=>({x:p.x,y:p.y}));
-  circle={...data.circle}; radius=data.radius||5;
+  circle={...data.circle};
   zones=(data.zones||[]).map(z=>({...z})); bestPos=null; mustHitPoint=null;
   fitView(); invalidateHeatmap(); draw();
 }
@@ -1564,7 +1611,7 @@ function loadUserPreset(i) {
   const stored=loadBuiltinPresets();
   const data=stored[i]; if(!data) return;
   pts=data.pts.map(p=>({x:p[0],y:p[1]}));
-  circle={...data.circle}; radius=data.radius||5;
+  circle={...data.circle};
   zones=[]; bestPos=null; mustHitPoint=null;
   fitView(); invalidateHeatmap(); draw();
 }
@@ -1653,6 +1700,10 @@ function startSimulation() {
   simKilled = 0;
   simEnemies = [];
   simSpawnQueue = buildSpawnQueue();
+  zedUnits = [];
+  zedMicroQueue = [];
+  zedNextMicroAt = 0;
+  zedMicroReadyAfter = 0;
 
   document.getElementById('btn-sim-start').style.display = 'none';
   document.getElementById('btn-sim-stop').style.display = '';
@@ -1669,6 +1720,8 @@ function stopSimulation() {
   document.body.classList.remove('sim-active');
   simEnemies = [];
   simSpawnQueue = [];
+  zedUnits = [];
+  zedMicroQueue = [];
   updateSimStats();
   draw();
 }
@@ -1721,17 +1774,119 @@ function simTick(ts) {
     if (furthest) furthest.hp -= t.dps * dtScaled;
   }
 
-  // Remove dead or finished
+  // Remove dead or finished enemies
   const arc = getPathArc();
   const before = simEnemies.length;
   simEnemies = simEnemies.filter(e => e.hp > 0 && e.dist < arc.total);
   simKilled += before - simEnemies.length;
 
+  // ── Zed system ──────────────────────────────────────────────────────────────
+  const zedEnabled = document.getElementById('zed-enabled').checked;
+  if (zedEnabled) {
+    const zedSpeed = parseFloat(document.getElementById('zed-speed').value) || 3;
+    const microInterval = parseFloat(document.getElementById('zed-micro').value) || 10;
+    const qty = Math.max(1, parseInt(document.getElementById('zed-qty').value) || 1);
+    const frBuff = document.getElementById('zed-fr-buff').checked;
+    const fireRateMult = frBuff ? 0.5 : 1;    // 100% faster = half the interval
+    const splashCDMult = frBuff ? (1/3.5) : 1; // 250% faster = 1/3.5 the interval
+
+    // Trigger new micro when: time >= nextMicroAt AND no zed units alive AND no zed spawns pending
+    if (simTime >= zedNextMicroAt && zedUnits.length === 0 && zedMicroQueue.length === 0) {
+      // Schedule qty micros staggered 0.1s apart to avoid exact overlap
+      for (let q = 0; q < qty; q++) {
+        const base = simTime + q * 0.15;
+        ZED_MICRO_OFFSETS.forEach((off, li) => {
+          zedMicroQueue.push({ spawnAt: base + off, levelIdx: li });
+        });
+      }
+      zedNextMicroAt = Infinity; // will reset after all zeds die
+    }
+
+    // Spawn pending zeds
+    const toSpawn = zedMicroQueue.filter(z => z.spawnAt <= simTime);
+    zedMicroQueue = zedMicroQueue.filter(z => z.spawnAt > simTime);
+    for (const spawn of toSpawn) {
+      const stats = ZED_LEVELS[spawn.levelIdx];
+      zedUnits.push({
+        id: nextTowerId++,
+        levelIdx: spawn.levelIdx,
+        stats,
+        hp: stats.hp,
+        maxHp: stats.hp,
+        dist: arc.total, // start at end of path
+        fireCD: 0,
+        splashCD: stats.splashCD || 0,
+        dead: false,
+      });
+    }
+
+    // Move zeds toward enemies — always move, shoot while moving
+    for (const z of zedUnits) {
+      // Always advance toward path start
+      z.dist -= zedSpeed * dtScaled;
+
+      const zPos = posAtDist(z.dist);
+
+      // Find target: furthest-along enemy within range (Euclidean world distance)
+      let target = null, furthestEnemyDist = -Infinity;
+      for (const e of simEnemies) {
+        const ePos = posAtDist(e.dist);
+        const d = Math.hypot(zPos.x - ePos.x, zPos.y - ePos.y);
+        if (d <= z.stats.range && e.dist > furthestEnemyDist) {
+          target = e; furthestEnemyDist = e.dist;
+        }
+      }
+
+      // Single-target fire
+      if (target) {
+        z.fireCD -= dtScaled;
+        if (z.fireCD <= 0) {
+          target.hp -= z.stats.dmgSingle;
+          z.fireCD = z.stats.firerate * fireRateMult;
+        }
+      }
+
+      // Splash fire — hits all enemies within splashR Euclidean distance
+      if (z.stats.dmgSplash !== null && z.stats.splashCD !== null) {
+        z.splashCD -= dtScaled;
+        if (z.splashCD <= 0) {
+          for (const e of simEnemies) {
+            const ePos = posAtDist(e.dist);
+            const d = Math.hypot(zPos.x - ePos.x, zPos.y - ePos.y);
+            if (d <= z.stats.splashR) e.hp -= z.stats.dmgSplash;
+          }
+          z.splashCD = z.stats.splashCD * splashCDMult;
+        }
+      }
+
+      // Collision: zed physically reaches an enemy
+      for (const e of simEnemies) {
+        const ePos = posAtDist(e.dist);
+        const d = Math.hypot(zPos.x - ePos.x, zPos.y - ePos.y);
+        if (d <= 0.8) {
+          e.hp -= z.hp;
+          z.dead = true;
+          break;
+        }
+      }
+
+      if (z.dist <= 0) z.dead = true;
+    }
+
+    // Remove dead zeds
+    zedUnits = zedUnits.filter(z => !z.dead);
+
+    // If all zeds dead and no queue, schedule next micro
+    if (zedUnits.length === 0 && zedMicroQueue.length === 0 && zedNextMicroAt === Infinity) {
+      zedNextMicroAt = simTime + microInterval;
+    }
+  }
+
   updateSimStats();
   draw();
 
   // End when all done
-  if (simEnemies.length === 0 && simSpawnQueue.length === 0 && simTime > 1) {
+  if (simEnemies.length === 0 && simSpawnQueue.length === 0 && zedUnits.length === 0 && zedMicroQueue.length === 0 && simTime > 1) {
     stopSimulation();
     return;
   }
@@ -1821,26 +1976,20 @@ function drawSimulation() {
     const rPx = t.range * zoom;
     const isSel = t.id === selectedTower;
     const col = t.type === 'single' ? '#4ab4f0' : '#c084fc';
-
-    // Range circle
     ctx.beginPath(); ctx.arc(s.x, s.y, rPx, 0, Math.PI*2);
     ctx.fillStyle = t.type === 'single' ? 'rgba(74,180,240,0.06)' : 'rgba(192,132,252,0.06)';
     ctx.fill();
-    ctx.strokeStyle = isSel ? col : col.replace(')', ',0.45)').replace('rgb', 'rgba');
+    ctx.strokeStyle = isSel ? col : (t.type === 'single' ? 'rgba(74,180,240,0.45)' : 'rgba(192,132,252,0.45)');
     ctx.lineWidth = isSel ? 1.5 : 1;
     ctx.setLineDash(isSel ? [] : [3,3]);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Tower body
+    ctx.stroke(); ctx.setLineDash([]);
     ctx.fillStyle = col;
     ctx.beginPath(); ctx.arc(s.x, s.y, isSel ? 5 : 4, 0, Math.PI*2); ctx.fill();
     ctx.strokeStyle = isSel ? '#fff' : 'rgba(255,255,255,0.4)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    ctx.lineWidth = 1; ctx.stroke();
   }
 
-  // Placing tower preview (follow mouse)
+  // Placing tower preview
   if (placingTower && simMouseWorld) {
     const s = toScreen(simMouseWorld.x, simMouseWorld.y);
     const defRange = parseFloat(document.getElementById('te-range').value) || 10;
@@ -1855,38 +2004,71 @@ function drawSimulation() {
     ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, Math.PI*2); ctx.fill();
   }
 
-  // Draw enemies
+  // Draw zed units (diamonds)
+  const zedColors = ['#f0e44a', '#f0944a', '#f04a4a'];
+  for (const z of zedUnits) {
+    const pos = posAtDist(z.dist);
+    const s = toScreen(pos.x, pos.y);
+    const r = Math.max(1.5, 1.2 * zoom);
+    const col = zedColors[z.levelIdx] || '#f0e44a';
+    const pct = z.hp / z.maxHp;
+    // Range ring
+    ctx.beginPath(); ctx.arc(s.x, s.y, z.stats.range * zoom, 0, Math.PI*2);
+    ctx.strokeStyle = col + '33'; ctx.lineWidth = 0.5; ctx.setLineDash([2,2]);
+    ctx.stroke(); ctx.setLineDash([]);
+    // Shadow
+    ctx.beginPath(); ctx.arc(s.x, s.y, r + 1, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fill();
+    // Diamond body
+    ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = col; ctx.fillRect(-r, -r, r*2, r*2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 0.8; ctx.strokeRect(-r, -r, r*2, r*2);
+    ctx.restore();
+    // HP bar
+    const bw = Math.max(14, r * 3.5), bh = 2;
+    const bx = s.x - bw/2, by = s.y - r - 6;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(bx, by, bw, bh);
+    ctx.fillStyle = col; ctx.fillRect(bx, by, bw * pct, bh);
+    // Level label
+    ctx.fillStyle = col;
+    ctx.font = `bold ${Math.max(6, zoom*6)}px IBM Plex Mono, monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(`L${z.stats.level}`, s.x, by - 1);
+    ctx.textAlign = 'left';
+  }
+
+  // Draw enemies (circles)
   for (const e of simEnemies) {
     const pos = posAtDist(e.dist);
     const s = toScreen(pos.x, pos.y);
     const pct = Math.max(0, e.hp / e.maxHp);
-    const r = Math.max(2, 2.5 * zoom);
-
-    // Shadow
+    const r = Math.max(1.5, 1.2 * zoom);
+    const hue = pct * 120;
     ctx.beginPath(); ctx.arc(s.x, s.y, r + 1, 0, Math.PI*2);
     ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fill();
-
-    // Body gradient based on HP
-    const hue = pct * 120; // green→red
     ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, Math.PI*2);
     ctx.fillStyle = `hsl(${hue},90%,55%)`; ctx.fill();
     ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 0.8; ctx.stroke();
-
-    // Health bar
-    const bw = Math.max(14, r * 3.5);
-    const bh = 2;
+    const bw = Math.max(14, r * 3.5), bh = 2;
     const bx = s.x - bw/2, by = s.y - r - 5;
-    ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillRect(bx, by, bw, bh);
-    ctx.fillStyle = `hsl(${hue},80%,50%)`;
-    ctx.fillRect(bx, by, bw * pct, bh);
-
-    // HP label
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(bx, by, bw, bh);
+    ctx.fillStyle = `hsl(${hue},80%,50%)`; ctx.fillRect(bx, by, bw * pct, bh);
     ctx.fillStyle = 'rgba(255,255,255,0.8)';
     ctx.font = `${Math.max(7, Math.min(9, zoom*7))}px IBM Plex Mono, monospace`;
     ctx.textAlign = 'center';
     const hpStr = e.hp >= 1000 ? (e.hp/1000).toFixed(1)+'k' : Math.ceil(e.hp).toString();
     ctx.fillText(hpStr, s.x, by - 1);
+    ctx.textAlign = 'left';
+  }
+
+  // Zed countdown timer
+  if (document.getElementById('zed-enabled')?.checked && simRunning &&
+      zedUnits.length === 0 && zedMicroQueue.length === 0 && zedNextMicroAt < Infinity) {
+    const remaining = Math.max(0, zedNextMicroAt - simTime);
+    ctx.fillStyle = 'rgba(240,228,74,0.85)';
+    ctx.font = '9px IBM Plex Mono, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`zed in ${remaining.toFixed(1)}s`, W - 8, H - 8);
     ctx.textAlign = 'left';
   }
 }
@@ -1927,6 +2109,188 @@ canvas.addEventListener('pointermove', e => {
 }, true);
 
 renderTowerList();
+
+// ─── Multi-Tower Optimizer ────────────────────────────────────────────────────
+
+function pointNearPath(wx, wy, buf, pathPts) {
+  for (let i = 0; i < pathPts.length - 1; i++) {
+    const p1 = pathPts[i], p2 = pathPts[i+1];
+    const dx = p2.x-p1.x, dy = p2.y-p1.y;
+    const len2 = dx*dx+dy*dy;
+    if (len2 < 0.0001) continue;
+    const t = Math.max(0, Math.min(1, ((wx-p1.x)*dx+(wy-p1.y)*dy)/len2));
+    if (Math.hypot(wx-(p1.x+dx*t), wy-(p1.y+dy*t)) < buf) return true;
+  }
+  return false;
+}
+
+function findMultiTower() {
+  mtCancelToken.cancelled = true;
+  const token = { cancelled: false };
+  mtCancelToken = token;
+
+  const nTowers  = Math.max(1, parseInt(document.getElementById('mt-count').value) || 3);
+  const exclHalf = Math.max(0.5, parseFloat(document.getElementById('mt-excl').value) || 5) / 2;
+  const trackBuf = parseFloat(document.getElementById('mt-buffer').value) ?? 2;
+  const isOrb    = sensorMode === 'orbital';
+  const refR     = isOrb ? anchorRadius : radius;
+
+  const btn = document.getElementById('btn-mt');
+  btn.textContent = 'Computing…'; btn.disabled = true;
+
+  const pathPts  = worldArr();
+  const baseZones = zones.map(z => ({...z}));
+  const mh = mustHitPoint ? {...mustHitPoint} : null;
+
+  let cumLen = 0;
+  const segs = [];
+  for (let i = 0; i < pathPts.length-1; i++) {
+    const l = Math.hypot(pathPts[i+1].x-pathPts[i].x, pathPts[i+1].y-pathPts[i].y);
+    segs.push({p1:pathPts[i], p2:pathPts[i+1], len:l}); cumLen += l;
+  }
+  function pathPtAt(t) {
+    let rem = t;
+    for (const seg of segs) {
+      if (rem <= seg.len+0.001) {
+        const frac = Math.min(rem/Math.max(seg.len,0.001),1);
+        return {x:seg.p1.x+(seg.p2.x-seg.p1.x)*frac, y:seg.p1.y+(seg.p2.y-seg.p1.y)*frac, seg};
+      }
+      rem -= seg.len;
+    }
+    const last = segs[segs.length-1];
+    return {x:last.p2.x, y:last.p2.y, seg:last};
+  }
+
+  // Build candidate positions
+  const STEPS = Math.max(150, Math.ceil(cumLen/2));
+  const candidates = [];
+  const seen = new Set();
+  function addCand(x, y) {
+    if (trackBuf > 0 && pointNearPath(x, y, trackBuf, pathPts)) return;
+    const kx = Math.round(x*2)/2, ky = Math.round(y*2)/2;
+    const key = `${kx},${ky}`;
+    if (seen.has(key)) return;
+    seen.add(key); candidates.push({x, y});
+  }
+  for (let s = 0; s <= STEPS; s++) {
+    const {x, y, seg} = pathPtAt((s/STEPS)*cumLen);
+    const dx = seg.p2.x-seg.p1.x, dy = seg.p2.y-seg.p1.y;
+    const ln = Math.hypot(dx,dy)||1, nx = -dy/ln, ny = dx/ln;
+    addCand(x, y);
+    for (let d = refR*0.3; d <= refR*1.8; d += refR*0.3) {
+      addCand(x+nx*d, y+ny*d); addCand(x-nx*d, y-ny*d);
+    }
+  }
+  for (const pt of pathPts) {
+    for (let a = 0; a < Math.PI*2; a += Math.PI/16) {
+      for (let d = refR*0.25; d <= refR*1.5; d += refR*0.25) {
+        addCand(pt.x+Math.cos(a)*d, pt.y+Math.sin(a)*d);
+      }
+    }
+  }
+
+  if (typeof multiTowerResults !== 'undefined') multiTowerResults = [];
+  let activeZones = [...baseZones];
+
+  function scoreAt(x, y, z2) {
+    if (!opt_isValid(x, y, z2, mh, radius, anchorRadius, scoutRadius, isOrb)) return -1;
+    if (trackBuf > 0 && pointNearPath(x, y, trackBuf, pathPts)) return -1;
+    return isOrb ? opt_orbitalScore(pathPts, x, y, anchorRadius, scoutRadius)
+                 : opt_totalOverlap(pathPts, x, y, radius);
+  }
+
+  function placeNext(idx) {
+    if (token.cancelled) { finish(true); return; }
+    if (idx >= nTowers) { finish(false); return; }
+
+    const z2 = [...activeZones];
+    let best = -1, bx = 0, by = 0;
+    for (const c of candidates) {
+      const sc = scoreAt(c.x, c.y, z2);
+      if (sc > best) { best = sc; bx = c.x; by = c.y; }
+    }
+    if (best < 0) { finish(false); return; }
+
+    // Hill-climb refine
+    let step = refR * 0.3;
+    while (step > 0.1) {
+      let moved = false;
+      for (const [ddx,ddy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]]) {
+        const nx = bx+ddx*step, ny = by+ddy*step;
+        const sc = scoreAt(nx, ny, z2);
+        if (sc > best) { best=sc; bx=nx; by=ny; moved=true; break; }
+      }
+      if (!moved) step *= 0.5;
+    }
+
+    multiTowerResults.push({x:bx, y:by, score:best});
+    // Add exclusion square for next iterations
+    activeZones.push({x1:bx-exclHalf, y1:by-exclHalf, x2:bx+exclHalf, y2:by+exclHalf});
+    renderMTResults(); draw();
+    setTimeout(() => placeNext(idx+1), 0);
+  }
+
+  function finish(cancelled) {
+    btn.textContent = 'Find multi-tower'; btn.disabled = false;
+    if (!cancelled) renderMTResults();
+    draw();
+  }
+
+  placeNext(0);
+}
+
+function renderMTResults() {
+  const el = document.getElementById('mt-results');
+  if (!multiTowerResults.length) { el.innerHTML = ''; return; }
+  const pl = pathLength();
+  el.innerHTML = multiTowerResults.map((t,i) => {
+    const pct = pl > 0 ? (t.score/pl*100).toFixed(1)+'%' : '—';
+    return `<div style="padding:2px 0;border-bottom:1px solid var(--border);color:var(--text2)">
+      T${i+1}: (${t.x.toFixed(1)}, ${t.y.toFixed(1)}) <span style="color:var(--warn)">${pct}</span>
+    </div>`;
+  }).join('');
+}
+
+function drawMultiTowerResults() {
+  if (!multiTowerResults.length) return;
+  const exclHalf = Math.max(0.5, parseFloat(document.getElementById('mt-excl').value) || 5) / 2;
+  const trackBuf = parseFloat(document.getElementById('mt-buffer').value) ?? 2;
+
+  // Track buffer visualized as thick line
+  if (trackBuf > 0) {
+    const wa = worldArr();
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,80,0.12)';
+    ctx.lineWidth = trackBuf * 2 * zoom;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath();
+    const s0 = toScreen(wa[0].x, wa[0].y); ctx.moveTo(s0.x, s0.y);
+    for (let i = 1; i < wa.length; i++) { const s=toScreen(wa[i].x,wa[i].y); ctx.lineTo(s.x,s.y); }
+    ctx.stroke(); ctx.restore();
+  }
+
+  multiTowerResults.forEach((t, i) => {
+    const s = toScreen(t.x, t.y);
+    const rPx = radius * zoom;
+    const exPx = exclHalf * zoom;
+    // Range ring
+    ctx.beginPath(); ctx.arc(s.x, s.y, rPx, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(240,228,74,0.02)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(240,228,74,0.18)'; ctx.lineWidth = 0.8; ctx.setLineDash([]); ctx.stroke();
+    // Exclusion box
+    ctx.strokeStyle = 'rgba(240,100,74,0.5)'; ctx.lineWidth = 0.8; ctx.setLineDash([3,2]);
+    ctx.strokeRect(s.x-exPx, s.y-exPx, exPx*2, exPx*2); ctx.setLineDash([]);
+    // Center dot
+    ctx.fillStyle = '#f0e44a'; ctx.beginPath(); ctx.arc(s.x,s.y,3,0,Math.PI*2); ctx.fill();
+    // Label
+    ctx.fillStyle = 'rgba(240,228,74,0.9)';
+    ctx.font = 'bold 9px IBM Plex Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`T${i+1}`, s.x, s.y - rPx - 4);
+    ctx.textAlign = 'left';
+  });
+}
+
 </script>
 </body>
 </html>
